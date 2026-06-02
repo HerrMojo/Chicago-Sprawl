@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">CITY WIKI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080b0f;
+    --bg2:      #0d1117;
+    --bg3:      #111820;
+    --border:   #1e2d3d;
+    --accent:   #00ffe1;
+    --accent2:  #ff3c5a;
+    --accent3:  #f5a623;
+    --dim:      #3a5068;
+    --text:     #c8dae8;
+    --text-dim: #5a7a95;
+    --mono:     'Share Tech Mono', monospace;
+    --sans:     'Barlow Condensed', sans-serif;
+    --body:     'Barlow', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-brand {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem 0;
+    border-right: 1px solid var(--border);
+    padding-right: 2rem;
+    min-width: 220px;
+  }
+
+  .city-name {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 2rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(0,255,225,0.4);
+    line-height: 1;
+  }
+
+  .city-tagline {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-top: 0.3rem;
+  }
+
+  /* ── NAV TABS ── */
+  nav {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex: 1;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0 1.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: rgba(0,255,225,0.05);
+  }
+
+  .tab-btn .tab-icon { font-size: 1rem; }
+
+  /* ── SEARCH BAR ── */
+  .header-search {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem 0.5rem 2.2rem;
+    width: 240px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text-dim); }
+
+  .search-icon {
+    position: absolute;
+    left: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 0.8rem;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+
+  .section-title {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 1.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .section-title span {
+    color: var(--accent);
+    margin-right: 0.5rem;
+  }
+
+  .count-badge {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.6rem;
+  }
+
+  /* ── ADD BUTTON ── */
+  .btn-add {
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-add:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  /* ── CARD GRID ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+    position: relative;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card:hover { border-color: var(--dim); }
+  .card:hover::before { opacity: 1; }
+
+  .card-handle {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .card-meta {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .card-meta .meta-item { display: flex; gap: 0.3rem; align-items: center; }
+
+  .card-desc {
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+
+  .card-tags {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Status colors */
+  .status { font-family: var(--mono); font-size: 0.65rem; padding: 0.1rem 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .status-active    { color: var(--accent);  border: 1px solid rgba(0,255,225,0.3); background: rgba(0,255,225,0.07); }
+  .status-retired   { color: var(--accent3); border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07); }
+  .status-deceased  { color: var(--accent2); border: 1px solid rgba(255,60,90,0.3); background: rgba(255,60,90,0.07); }
+  .status-missing   { color: #b060ff;        border: 1px solid rgba(176,96,255,0.3); background: rgba(176,96,255,0.07); }
+  .status-unknown   { color: var(--text-dim); border: 1px solid var(--border); }
+
+  /* Power / danger pips */
+  .pips { display: flex; gap: 3px; align-items: center; }
+  .pip { width: 8px; height: 8px; border: 1px solid var(--dim); }
+  .pip.filled { background: var(--accent); border-color: var(--accent); }
+  .pip.filled.danger { background: var(--accent2); border-color: var(--accent2); }
+
+  /* ── MAP TAB ── */
+  .map-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .map-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    margin-bottom: 1.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px;
+  }
+
+  .map-zone {
+    aspect-ratio: 1.4;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .map-zone:hover { background: var(--bg2); border-color: var(--accent); }
+  .map-zone.populated { border-color: var(--dim); }
+
+  .map-zone-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .map-zone-type {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+  }
+
+  .map-zone-danger {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--accent2);
+  }
+
+  .map-zone.empty .map-zone-name { color: var(--dim); font-weight: 400; }
+
+  .map-legend {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+
+  .legend-dot { width: 8px; height: 8px; }
+
+  /* ── DETAIL PANEL (drawer) ── */
+  .detail-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  .detail-overlay.open { display: flex; }
+
+  .detail-panel {
+    width: min(560px, 100vw);
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .detail-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    align-self: flex-start;
+    letter-spacing: 0.1em;
+  }
+
+  .detail-close:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .detail-title {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .detail-subtitle {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+  }
+
+  .detail-section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .detail-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text);
+    opacity: 0.85;
+  }
+
+  .detail-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .detail-list li {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    padding-left: 1rem;
+    position: relative;
+  }
+
+  .detail-list li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+
+  .detail-edit-btn {
+    background: none;
+    border: 1px solid var(--dim);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: all 0.15s;
+  }
+
+  .detail-edit-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── MODAL FORM ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    width: min(640px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: fadeUp 0.2s ease;
+  }
+
+  @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .modal-title {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 1.3rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  input, select, textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+    appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: var(--bg2); }
+
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-submit {
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.6rem 1.5rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-submit:hover { opacity: 0.85; }
+
+  .btn-cancel {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+  }
+
+  .btn-cancel:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── SESSIONS TAB ── */
+  .session-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .session-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem 1.5rem;
+    align-items: start;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .session-card:hover { border-color: var(--dim); }
+
+  .session-number {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    writing-mode: vertical-rl;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .session-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .session-summary {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .session-link {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid rgba(0,255,225,0.3);
+    padding: 0.3rem 0.6rem;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s;
+  }
+
+  .session-link:hover { background: rgba(0,255,225,0.1); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+
+  .empty-state .empty-icon { font-size: 2rem; margin-bottom: 0.75rem; opacity: 0.4; }
+
+  /* ── FILTER ROW ── */
+  .filter-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,225,0.07);
+  }
+
+  /* ── FORMER RUNNER BADGE ── */
+  .runner-badge {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 0.1rem 0.5rem;
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.3);
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--dim); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* ── EXPORT NOTE ── */
+  .export-bar {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .export-bar strong { color: var(--accent3); }
+
+  .btn-export {
+    background: none;
+    border: 1px solid var(--accent3);
+    color: var(--accent3);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-export:hover { background: rgba(245,166,35,0.1); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="city-name" id="header-city-name">LOADING…</div>
+    <div class="city-tagline" id="header-tagline"></div>
+  </div>
+  <nav>
+    <button class="tab-btn active" data-tab="map"><span class="tab-icon">◈</span> Map</button>
+    <button class="tab-btn" data-tab="npcs"><span class="tab-icon">◉</span> NPCs</button>
+    <button class="tab-btn" data-tab="corps"><span class="tab-icon">◆</span> Corps</button>
+    <button class="tab-btn" data-tab="locations"><span class="tab-icon">◎</span> Locations</button>
+    <button class="tab-btn" data-tab="sessions"><span class="tab-icon">▣</span> Sessions</button>
+  </nav>
+  <div class="header-search">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="global-search" placeholder="Search wiki…" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══ MAP TAB ══ -->
+  <div class="tab-panel active" id="tab-map">
+    <div class="section-header">
+      <div class="section-title"><span>//</span> City Map</div>
+      <button class="btn-add" onclick="openModal('district')">+ Add District</button>
+    </div>
+
+    <div class="map-container">
+      <div class="map-grid" id="map-grid"></div>
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--border)"></div> Undeveloped</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--dim)"></div> Named district</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div> Danger ████</div>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top:2rem">
+      <div class="section-title"><span>//</span> Districts <span class="count-badge" id="district-count"></span></div>
+    </div>
+    <div class="card-grid" id="district-grid"></div>
+  </div>
+
+  <!-- ══ NPCS TAB ══ -->
+  <div class="tab-panel" id="tab-npcs">
+    <div class="section-header">
+      <div class="section-title"><span>//</span> Known Individuals <span class="count-badge" id="npc-count"></span></div>
+      <button class="btn-add" onclick="openModal('npc')">+ Add NPC</button>
+    </div>
+    <div class="filter-row" id="npc-filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="Active">Active</button>
+      <button class="filter-btn" data-filter="Retired">Retired</button>
+      <button class="filter-btn" data-filter="Deceased">Deceased</button>
+      <button class="filter-btn" data-filter="Missing">Missing</button>
+      <button class="filter-btn" data-filter="runner">Former Runners</button>
+    </div>
+    <div class="card-grid" id="npc-grid"></div>
+  </div>
+
+  <!-- ══ CORPS TAB ══ -->
+  <div class="tab-panel" id="tab-corps">
+    <div class="section-header">
+      <div class="section-title"><span>//</span> Corporations <span class="count-badge" id="corp-count"></span></div>
+      <button class="btn-add" onclick="openModal('corp')">+ Add Corporation</button>
+    </div>
+    <div class="filter-row" id="corp-filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+    </div>
+    <div class="card-grid" id="corp-grid"></div>
+  </div>
+
+  <!-- ══ LOCATIONS TAB ══ -->
+  <div class="tab-panel" id="tab-locations">
+    <div class="section-header">
+      <div class="section-title"><span>//</span> Locations <span class="count-badge" id="loc-count"></span></div>
+      <button class="btn-add" onclick="openModal('location')">+ Add Location</button>
+    </div>
+    <div class="filter-row" id="loc-filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+    </div>
+    <div class="card-grid" id="loc-grid"></div>
+  </div>
+
+  <!-- ══ SESSIONS TAB ══ -->
+  <div class="tab-panel" id="tab-sessions">
+    <div class="section-header">
+      <div class="section-title"><span>//</span> Run Archive <span class="count-badge" id="session-count"></span></div>
+      <button class="btn-add" onclick="openModal('session')">+ Log Session</button>
+    </div>
+    <div class="export-bar">
+      <div><strong>// DATA EXPORT</strong> — After adding entries, copy updated data to your <code>data.js</code> file to persist changes.</div>
+      <button class="btn-export" onclick="exportData()">Export data.js</button>
+    </div>
+    <div class="session-list" id="session-list"></div>
+  </div>
+
+</main>
+
+<!-- ══ DETAIL DRAWER ══ -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="detail-panel" id="detail-panel"></div>
+</div>
+
+<!-- ══ ADD/EDIT MODALS ══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let activeTab = 'map';
+let activeFilters = { npcs: 'all', corps: 'all', locations: 'all' };
+let searchQuery = '';
+
+// Runtime data (editable in session, lost on reload unless exported)
+let runtimeData = {
+  districts: [...districts],
+  locations: [...locations],
+  corporations: [...corporations],
+  npcs: [...npcs],
+  sessions: [...sessions]
+};
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+document.getElementById('header-city-name').textContent = CITY_NAME;
+document.getElementById('header-tagline').textContent = CITY_TAGLINE;
+document.title = CITY_NAME + ' WIKI';
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+document.getElementById('global-search').addEventListener('input', e => {
+  searchQuery = e.target.value.toLowerCase();
+  renderAll();
+});
+
+// ════════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+  renderAll();
+}
+
+// ════════════════════════════════════════
+//  RENDER ALL
+// ════════════════════════════════════════
+function renderAll() {
+  renderMap();
+  renderNPCs();
+  renderCorps();
+  renderLocations();
+  renderSessions();
+  updateCounts();
+  buildFilters();
+}
+
+// ════════════════════════════════════════
+//  MAP
+// ════════════════════════════════════════
+function renderMap() {
+  const grid = document.getElementById('map-grid');
+  const totalCells = 20;
+  const ds = runtimeData.districts;
+  grid.innerHTML = '';
+
+  for (let i = 0; i < totalCells; i++) {
+    const d = ds[i];
+    const cell = document.createElement('div');
+    cell.className = 'map-zone' + (d ? ' populated' : ' empty');
+
+    if (d) {
+      const dangerColor = d.dangerLevel >= 4 ? 'var(--accent2)' : d.dangerLevel >= 3 ? 'var(--accent3)' : 'var(--text-dim)';
+      cell.innerHTML = `
+        <span class="map-zone-danger" style="color:${dangerColor}">${'█'.repeat(d.dangerLevel)}</span>
+        <div class="map-zone-name">${d.name}</div>
+        <div class="map-zone-type">${d.type}</div>
+      `;
+      cell.onclick = () => showDetail('district', d.id);
+    } else {
+      cell.innerHTML = `<div class="map-zone-name" style="font-size:0.6rem;opacity:0.3">[UNMAPPED]</div>`;
+    }
+    grid.appendChild(cell);
+  }
+
+  const dg = document.getElementById('district-grid');
+  const filtered = runtimeData.districts.filter(d => matchSearch(d, ['name','type','description','controlledBy']));
+  dg.innerHTML = filtered.length ? filtered.map(d => districtCard(d)).join('') : emptyState('No districts found');
+}
+
+function districtCard(d) {
+  const dangerColor = d.dangerLevel >= 4 ? 'var(--accent2)' : d.dangerLevel >= 3 ? 'var(--accent3)' : 'var(--accent)';
+  return `
+  <div class="card" onclick="showDetail('district','${d.id}')">
+    <div class="card-handle">${d.name}</div>
+    <div class="card-meta">
+      <span class="meta-item">${d.type}</span>
+      <span class="meta-item">Control: ${d.controlledBy}</span>
+      <span class="meta-item">First seen: ${d.firstSeen}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
+      <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">DANGER</span>
+      <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=d.dangerLevel?'filled danger':''}"></div>`).join('')}</div>
+    </div>
+    <div class="card-desc">${d.description}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════════
+//  NPCS
+// ════════════════════════════════════════
+function renderNPCs() {
+  const f = activeFilters.npcs;
+  let data = runtimeData.npcs.filter(n => {
+    if (f === 'runner') return n.formerRunner;
+    if (f !== 'all') return n.status === f;
+    return true;
+  }).filter(n => matchSearch(n, ['handle','realName','role','affiliation','district','description']));
+
+  document.getElementById('npc-grid').innerHTML = data.length ? data.map(npcCard).join('') : emptyState('No NPCs found');
+}
+
+function npcCard(n) {
+  return `
+  <div class="card" onclick="showDetail('npc','${n.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.25rem">
+      <div class="card-handle">${n.handle}</div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:flex-end">
+        <span class="status status-${n.status.toLowerCase()}">${n.status}</span>
+        ${n.formerRunner ? '<span class="runner-badge">Runner</span>' : ''}
+      </div>
+    </div>
+    <div class="card-meta">
+      <span class="meta-item">${n.role}</span>
+      <span class="meta-item">${n.affiliation}</span>
+      <span class="meta-item">${n.district}</span>
+    </div>
+    <div class="card-desc">${n.description}</div>
+    <div class="card-tags"><span class="tag">First seen: ${n.firstSeen}</span></div>
+  </div>`;
+}
+
+// ════════════════════════════════════════
+//  CORPORATIONS
+// ════════════════════════════════════════
+function renderCorps() {
+  const f = activeFilters.corps;
+  let data = runtimeData.corporations.filter(c => {
+    if (f !== 'all') return c.sector === f;
+    return true;
+  }).filter(c => matchSearch(c, ['name','sector','description']));
+
+  document.getElementById('corp-grid').innerHTML = data.length ? data.map(corpCard).join('') : emptyState('No corporations found');
+}
+
+function corpCard(c) {
+  return `
+  <div class="card" onclick="showDetail('corp','${c.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.25rem">
+      <div class="card-handle">${c.name}</div>
+      <span class="status status-${c.status.toLowerCase()}">${c.status}</span>
+    </div>
+    <div class="card-meta">
+      <span class="meta-item">${c.sector}</span>
+      <span class="meta-item">First seen: ${c.firstSeen}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
+      <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">POWER</span>
+      <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=c.powerLevel?'filled':''}"></div>`).join('')}</div>
+    </div>
+    <div class="card-desc">${c.description}</div>
+    <div class="card-tags">${c.knownOperations.slice(0,3).map(op=>`<span class="tag">${op}</span>`).join('')}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════════
+//  LOCATIONS
+// ════════════════════════════════════════
+function renderLocations() {
+  const f = activeFilters.locations;
+  let data = runtimeData.locations.filter(l => {
+    if (f !== 'all') return l.district === f;
+    return true;
+  }).filter(l => matchSearch(l, ['name','district','type','description']));
+
+  document.getElementById('loc-grid').innerHTML = data.length ? data.map(locCard).join('') : emptyState('No locations found');
+}
+
+function locCard(l) {
+  return `
+  <div class="card" onclick="showDetail('location','${l.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.25rem">
+      <div class="card-handle">${l.name}</div>
+      <span class="status status-${l.status.toLowerCase()}">${l.status}</span>
+    </div>
+    <div class="card-meta">
+      <span class="meta-item">${l.type}</span>
+      <span class="meta-item">${l.district}</span>
+      <span class="meta-item">First seen: ${l.firstSeen}</span>
+    </div>
+    <div class="card-desc">${l.description}</div>
+    <div class="card-tags">${l.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════════
+//  SESSIONS
+// ════════════════════════════════════════
+function renderSessions() {
+  const data = [...runtimeData.sessions].reverse();
+  document.getElementById('session-list').innerHTML = data.length ? data.map(sessionCard).join('') : emptyState('No sessions logged yet');
+}
+
+function sessionCard(s) {
+  return `
+  <div class="session-card">
+    <div class="session-number">${s.id.toUpperCase()}</div>
+    <div>
+      <div class="session-title">${s.title}</div>
+      ${s.date ? `<div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);margin-bottom:0.4rem">${s.date}</div>` : ''}
+      <div class="session-summary">${s.summary}</div>
+      ${s.runners.length ? `<div class="card-tags" style="margin-top:0.5rem">${s.runners.map(r=>`<span class="tag">Runner: ${r}</span>`).join('')}</div>` : ''}
+    </div>
+    <div>
+      ${s.newspaperUrl ? `<a class="session-link" href="${s.newspaperUrl}" target="_blank">📰 Read Issue</a>` : '<span style="font-family:var(--mono);font-size:0.6rem;color:var(--dim)">No issue yet</span>'}
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════
+//  FILTERS
+// ════════════════════════════════════════
+function buildFilters() {
+  // Corp sectors
+  const sectors = [...new Set(runtimeData.corporations.map(c => c.sector))];
+  const cf = document.getElementById('corp-filters');
+  cf.innerHTML = `<button class="filter-btn ${activeFilters.corps==='all'?'active':''}" data-filter="all">All</button>` +
+    sectors.map(s => `<button class="filter-btn ${activeFilters.corps===s?'active':''}" data-filter="${s}">${s}</button>`).join('');
+  cf.querySelectorAll('.filter-btn').forEach(b => b.onclick = () => { activeFilters.corps = b.dataset.filter; renderAll(); });
+
+  // Location districts
+  const ds = [...new Set(runtimeData.locations.map(l => l.district))];
+  const lf = document.getElementById('loc-filters');
+  lf.innerHTML = `<button class="filter-btn ${activeFilters.locations==='all'?'active':''}" data-filter="all">All</button>` +
+    ds.map(d => `<button class="filter-btn ${activeFilters.locations===d?'active':''}" data-filter="${d}">${d}</button>`).join('');
+  lf.querySelectorAll('.filter-btn').forEach(b => b.onclick = () => { activeFilters.locations = b.dataset.filter; renderAll(); });
+
+  // NPC filters
+  document.getElementById('npc-filters').querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === activeFilters.npcs);
+    b.onclick = () => { activeFilters.npcs = b.dataset.filter; renderAll(); };
+  });
+}
+
+// ════════════════════════════════════════
+//  DETAIL DRAWER
+// ════════════════════════════════════════
+function showDetail(type, id) {
+  const overlay = document.getElementById('detail-overlay');
+  const panel = document.getElementById('detail-panel');
+  let html = '';
+
+  if (type === 'npc') {
+    const n = runtimeData.npcs.find(x => x.id === id);
+    if (!n) return;
+    html = `
+      <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
+      <div>
+        <div class="detail-title">${n.handle}</div>
+        <div class="detail-subtitle">${n.realName !== 'Unknown' ? n.realName + ' · ' : ''}${n.role} · ${n.affiliation}</div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <span class="status status-${n.status.toLowerCase()}">${n.status}</span>
+        ${n.formerRunner ? '<span class="runner-badge">Former Runner</span>' : ''}
+      </div>
+      <div><div class="detail-section-label">Profile</div><div class="detail-text">${n.description}</div></div>
+      <div><div class="detail-section-label">Location</div><div class="detail-text">${n.district}</div></div>
+      <div>
+        <div class="detail-section-label">Appeared In</div>
+        <ul class="detail-list">${n.appearedIn.map(s=>`<li>${s}</li>`).join('')}</ul>
+      </div>
+      ${n.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${n.notes}</div></div>` : ''}
+      <div><div class="detail-section-label">First Seen</div><div class="detail-text" style="font-family:var(--mono);font-size:0.8rem">${n.firstSeen}</div></div>
+      <button class="detail-edit-btn" onclick="openEditModal('npc','${id}')">✎ Edit Entry</button>
+    `;
+  } else if (type === 'corp') {
+    const c = runtimeData.corporations.find(x => x.id === id);
+    if (!c) return;
+    html = `
+      <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
+      <div>
+        <div class="detail-title">${c.name}</div>
+        <div class="detail-subtitle">${c.sector}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <span class="status status-${c.status.toLowerCase()}">${c.status}</span>
+        <div style="display:flex;align-items:center;gap:0.4rem">
+          <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim)">POWER</span>
+          <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=c.powerLevel?'filled':''}" style="width:10px;height:10px"></div>`).join('')}</div>
+        </div>
+      </div>
+      <div><div class="detail-section-label">Overview</div><div class="detail-text">${c.description}</div></div>
+      <div>
+        <div class="detail-section-label">Known Operations</div>
+        <ul class="detail-list">${c.knownOperations.map(op=>`<li>${op}</li>`).join('')}</ul>
+      </div>
+      ${c.allies.length ? `<div><div class="detail-section-label">Allied With</div><ul class="detail-list">${c.allies.map(a=>`<li>${a}</li>`).join('')}</ul></div>` : ''}
+      ${c.rivals.length ? `<div><div class="detail-section-label">Rivals</div><ul class="detail-list">${c.rivals.map(r=>`<li>${r}</li>`).join('')}</ul></div>` : ''}
+      ${c.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${c.notes}</div></div>` : ''}
+      <button class="detail-edit-btn" onclick="openEditModal('corp','${id}')">✎ Edit Entry</button>
+    `;
+  } else if (type === 'location') {
+    const l = runtimeData.locations.find(x => x.id === id);
+    if (!l) return;
+    html = `
+      <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
+      <div>
+        <div class="detail-title">${l.name}</div>
+        <div class="detail-subtitle">${l.type} · ${l.district}</div>
+      </div>
+      <span class="status status-${l.status.toLowerCase()}">${l.status}</span>
+      <div><div class="detail-section-label">Description</div><div class="detail-text">${l.description}</div></div>
+      <div>
+        <div class="detail-section-label">Tags</div>
+        <div class="card-tags">${l.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+      ${l.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${l.notes}</div></div>` : ''}
+      <div><div class="detail-section-label">First Seen</div><div class="detail-text" style="font-family:var(--mono);font-size:0.8rem">${l.firstSeen}</div></div>
+      <button class="detail-edit-btn" onclick="openEditModal('location','${id}')">✎ Edit Entry</button>
+    `;
+  } else if (type === 'district') {
+    const d = runtimeData.districts.find(x => x.id === id);
+    if (!d) return;
+    const locs = runtimeData.locations.filter(l => l.district === d.name);
+    html = `
+      <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
+      <div>
+        <div class="detail-title">${d.name}</div>
+        <div class="detail-subtitle">${d.type} · Controlled by ${d.controlledBy}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim)">DANGER</span>
+        <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=d.dangerLevel?'filled danger':''}" style="width:10px;height:10px"></div>`).join('')}</div>
+      </div>
+      <div><div class="detail-section-label">Description</div><div class="detail-text">${d.description}</div></div>
+      ${locs.length ? `<div><div class="detail-section-label">Known Locations (${locs.length})</div><ul class="detail-list">${locs.map(l=>`<li>${l.name} <span style="color:var(--dim)">· ${l.type}</span></li>`).join('')}</ul></div>` : ''}
+      ${d.notes ? `<div><div class="detail-section-label">GM Notes</div><div class="detail-text">${d.notes}</div></div>` : ''}
+      <button class="detail-edit-btn" onclick="openEditModal('district','${id}')">✎ Edit Entry</button>
+    `;
+  }
+
+  panel.innerHTML = html;
+  overlay.classList.add('open');
+}
+
+function closeDetail(e) {
+  if (e.target === document.getElementById('detail-overlay')) closeDetailDirect();
+}
+function closeDetailDirect() {
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+// ════════════════════════════════════════
+//  MODAL FORMS
+// ════════════════════════════════════════
+function openModal(type, editData = null) {
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  const isEdit = !!editData;
+  const title = isEdit ? `Edit ${type.toUpperCase()}` : `Add ${type.toUpperCase()}`;
+
+  const districtOptions = runtimeData.districts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+
+  let formHtml = `<div class="modal-title">// ${title}</div>`;
+
+  if (type === 'npc') {
+    const n = editData || {};
+    formHtml += `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Handle *</label>
+        <input id="f-handle" value="${n.handle||''}" placeholder="Street name / callsign">
+      </div>
+      <div class="form-group">
+        <label>Real Name</label>
+        <input id="f-realname" value="${n.realName||'Unknown'}" placeholder="Unknown">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Role *</label>
+        <input id="f-role" value="${n.role||''}" placeholder="Fixer, Street Doc, Enforcer…">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status">
+          ${['Active','Retired','Deceased','Missing','Unknown'].map(s=>`<option ${(n.status||'Active')===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Affiliation</label>
+        <input id="f-affil" value="${n.affiliation||'Independent'}" placeholder="Corp, gang, independent…">
+      </div>
+      <div class="form-group">
+        <label>District</label>
+        <select id="f-district"><option value="Unknown">Unknown</option>${districtOptions}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Seen</label>
+        <input id="f-firstseen" value="${n.firstSeen||'Session 1'}" placeholder="Session #">
+      </div>
+      <div class="form-group">
+        <label>Former Runner?</label>
+        <select id="f-runner"><option value="false" ${!n.formerRunner?'selected':''}>No</option><option value="true" ${n.formerRunner?'selected':''}>Yes</option></select>
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>Description *</label>
+      <textarea id="f-desc" placeholder="Who are they? What do they want?">${n.description||''}</textarea>
+    </div>
+    <div class="form-group full">
+      <label>Appeared In (comma-separated sessions)</label>
+      <input id="f-appeared" value="${(n.appearedIn||[]).join(', ')}" placeholder="Session 1, Session 2">
+    </div>
+    <div class="form-group full">
+      <label>GM Notes</label>
+      <textarea id="f-notes" placeholder="Private notes…">${n.notes||''}</textarea>
+    </div>`;
+
+  } else if (type === 'corp') {
+    const c = editData || {};
+    formHtml += `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Corporation Name *</label>
+        <input id="f-name" value="${c.name||''}" placeholder="Corp name">
+      </div>
+      <div class="form-group">
+        <label>Sector *</label>
+        <input id="f-sector" value="${c.sector||''}" placeholder="Security, Biotech, Data…">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Power Level (1–5)</label>
+        <input id="f-power" type="number" min="1" max="5" value="${c.powerLevel||3}">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status"><option ${(c.status||'Active')==='Active'?'selected':''}>Active</option><option ${c.status==='Defunct'?'selected':''}>Defunct</option><option ${c.status==='Unknown'?'selected':''}>Unknown</option></select>
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>Description *</label>
+      <textarea id="f-desc" placeholder="What do they do? What makes them dangerous?">${c.description||''}</textarea>
+    </div>
+    <div class="form-group full">
+      <label>Known Operations (comma-separated)</label>
+      <input id="f-ops" value="${(c.knownOperations||[]).join(', ')}" placeholder="Weapons R&D, Data brokering…">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Allies (comma-separated)</label>
+        <input id="f-allies" value="${(c.allies||[]).join(', ')}">
+      </div>
+      <div class="form-group">
+        <label>Rivals (comma-separated)</label>
+        <input id="f-rivals" value="${(c.rivals||[]).join(', ')}">
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>First Seen</label>
+      <input id="f-firstseen" value="${c.firstSeen||'Session 1'}">
+    </div>
+    <div class="form-group full">
+      <label>GM Notes</label>
+      <textarea id="f-notes">${c.notes||''}</textarea>
+    </div>`;
+
+  } else if (type === 'location') {
+    const l = editData || {};
+    formHtml += `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Location Name *</label>
+        <input id="f-name" value="${l.name||''}" placeholder="Name">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <input id="f-type" value="${l.type||''}" placeholder="Bar, HQ, Clinic, Market…">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>District</label>
+        <select id="f-district"><option value="">Unknown</option>${districtOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status"><option ${(l.status||'Active')==='Active'?'selected':''}>Active</option><option ${l.status==='Destroyed'?'selected':''}>Destroyed</option><option ${l.status==='Abandoned'?'selected':''}>Abandoned</option></select>
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>Description *</label>
+      <textarea id="f-desc" placeholder="What is this place? What goes on here?">${l.description||''}</textarea>
+    </div>
+    <div class="form-group full">
+      <label>Tags (comma-separated)</label>
+      <input id="f-tags" value="${(l.tags||[]).join(', ')}" placeholder="safe, neutral ground, runner hangout…">
+    </div>
+    <div class="form-group full">
+      <label>First Seen</label>
+      <input id="f-firstseen" value="${l.firstSeen||'Session 1'}">
+    </div>
+    <div class="form-group full">
+      <label>GM Notes</label>
+      <textarea id="f-notes">${l.notes||''}</textarea>
+    </div>`;
+
+  } else if (type === 'district') {
+    const d = editData || {};
+    formHtml += `
+    <div class="form-row">
+      <div class="form-group">
+        <label>District Name *</label>
+        <input id="f-name" value="${d.name||''}" placeholder="Name">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <input id="f-type" value="${d.type||''}" placeholder="Residential, Industrial, Corporate…">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Controlled By</label>
+        <input id="f-control" value="${d.controlledBy||'Contested'}" placeholder="Corp, gang, contested…">
+      </div>
+      <div class="form-group">
+        <label>Danger Level (1–5)</label>
+        <input id="f-danger" type="number" min="1" max="5" value="${d.dangerLevel||3}">
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>Description *</label>
+      <textarea id="f-desc" placeholder="What is this district like? Who lives here?">${d.description||''}</textarea>
+    </div>
+    <div class="form-group full">
+      <label>First Seen</label>
+      <input id="f-firstseen" value="${d.firstSeen||'Session 1'}">
+    </div>
+    <div class="form-group full">
+      <label>GM Notes</label>
+      <textarea id="f-notes">${d.notes||''}</textarea>
+    </div>`;
+
+  } else if (type === 'session') {
+    const s = editData || {};
+    formHtml += `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Session ID *</label>
+        <input id="f-sid" value="${s.id||'s'+(runtimeData.sessions.length)}" placeholder="s1, s2…">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input id="f-date" type="date" value="${s.date||''}">
+      </div>
+    </div>
+    <div class="form-group full">
+      <label>Title *</label>
+      <input id="f-title" value="${s.title||''}" placeholder="Session 1 — The Name of the Run">
+    </div>
+    <div class="form-group full">
+      <label>Summary</label>
+      <textarea id="f-summary" placeholder="What happened in this run?">${s.summary||''}</textarea>
+    </div>
+    <div class="form-group full">
+      <label>Runner Handles (comma-separated)</label>
+      <input id="f-runners" value="${(s.runners||[]).join(', ')}" placeholder="Ghost, Razor, Null…">
+    </div>
+    <div class="form-group full">
+      <label>Newspaper URL (if published)</label>
+      <input id="f-url" value="${s.newspaperUrl||''}" placeholder="https://…">
+    </div>`;
+  }
+
+  formHtml += `
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModalDirect()">Cancel</button>
+      <button class="btn-submit" onclick="submitForm('${type}', ${isEdit ? `'${editData?.id}'` : 'null'})">
+        ${isEdit ? 'Save Changes' : '+ Add Entry'}
+      </button>
+    </div>`;
+
+  content.innerHTML = formHtml;
+  overlay.classList.add('open');
+
+  // Pre-select district for locations/npcs
+  if ((type === 'npc' || type === 'location') && editData) {
+    const sel = content.querySelector('#f-district');
+    if (sel) sel.value = editData.district || '';
+  }
+}
+
+function openEditModal(type, id) {
+  closeDetailDirect();
+  let item;
+  if (type === 'npc') item = runtimeData.npcs.find(x => x.id === id);
+  else if (type === 'corp') item = runtimeData.corporations.find(x => x.id === id);
+  else if (type === 'location') item = runtimeData.locations.find(x => x.id === id);
+  else if (type === 'district') item = runtimeData.districts.find(x => x.id === id);
+  if (item) openModal(type, item);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function g(id) { return document.getElementById(id)?.value?.trim() || ''; }
+function gArr(id) { return g(id).split(',').map(s=>s.trim()).filter(Boolean); }
+
+function submitForm(type, editId) {
+  const isEdit = !!editId;
+
+  if (type === 'npc') {
+    const obj = {
+      id: editId || 'n' + Date.now(),
+      handle: g('f-handle') || 'Unknown',
+      realName: g('f-realname') || 'Unknown',
+      status: g('f-status') || 'Active',
+      role: g('f-role') || '',
+      affiliation: g('f-affil') || 'Independent',
+      district: g('f-district') || 'Unknown',
+      description: g('f-desc') || '',
+      firstSeen: g('f-firstseen') || 'Session 1',
+      appearedIn: gArr('f-appeared'),
+      formerRunner: g('f-runner') === 'true',
+      notes: g('f-notes')
+    };
+    if (isEdit) { const i = runtimeData.npcs.findIndex(x=>x.id===editId); runtimeData.npcs[i] = obj; }
+    else runtimeData.npcs.push(obj);
+
+  } else if (type === 'corp') {
+    const obj = {
+      id: editId || 'c' + Date.now(),
+      name: g('f-name') || 'Unknown Corp',
+      sector: g('f-sector') || 'Unknown',
+      description: g('f-desc') || '',
+      powerLevel: parseInt(g('f-power')) || 3,
+      knownOperations: gArr('f-ops'),
+      allies: gArr('f-allies'),
+      rivals: gArr('f-rivals'),
+      status: g('f-status') || 'Active',
+      firstSeen: g('f-firstseen') || 'Session 1',
+      notes: g('f-notes')
+    };
+    if (isEdit) { const i = runtimeData.corporations.findIndex(x=>x.id===editId); runtimeData.corporations[i] = obj; }
+    else runtimeData.corporations.push(obj);
+
+  } else if (type === 'location') {
+    const obj = {
+      id: editId || 'l' + Date.now(),
+      name: g('f-name') || 'Unknown Location',
+      district: g('f-district') || 'Unknown',
+      type: g('f-type') || '',
+      description: g('f-desc') || '',
+      tags: gArr('f-tags'),
+      status: g('f-status') || 'Active',
+      firstSeen: g('f-firstseen') || 'Session 1',
+      notes: g('f-notes')
+    };
+    if (isEdit) { const i = runtimeData.locations.findIndex(x=>x.id===editId); runtimeData.locations[i] = obj; }
+    else runtimeData.locations.push(obj);
+
+  } else if (type === 'district') {
+    const obj = {
+      id: editId || 'd' + Date.now(),
+      name: g('f-name') || 'Unknown District',
+      type: g('f-type') || '',
+      description: g('f-desc') || '',
+      controlledBy: g('f-control') || 'Contested',
+      dangerLevel: parseInt(g('f-danger')) || 3,
+      firstSeen: g('f-firstseen') || 'Session 1',
+      notes: g('f-notes')
+    };
+    if (isEdit) { const i = runtimeData.districts.findIndex(x=>x.id===editId); runtimeData.districts[i] = obj; }
+    else runtimeData.districts.push(obj);
+
+  } else if (type === 'session') {
+    const obj = {
+      id: g('f-sid') || 's' + Date.now(),
+      title: g('f-title') || 'Unnamed Session',
+      date: g('f-date'),
+      summary: g('f-summary') || '',
+      runners: gArr('f-runners'),
+      outcome: '',
+      newspaperUrl: g('f-url')
+    };
+    if (isEdit) { const i = runtimeData.sessions.findIndex(x=>x.id===editId); runtimeData.sessions[i] = obj; }
+    else runtimeData.sessions.push(obj);
+  }
+
+  closeModalDirect();
+  renderAll();
+}
+
+// ════════════════════════════════════════
+//  SEARCH HELPER
+// ════════════════════════════════════════
+function matchSearch(obj, fields) {
+  if (!searchQuery) return true;
+  return fields.some(f => (obj[f] || '').toLowerCase().includes(searchQuery));
+}
+
+// ════════════════════════════════════════
+//  COUNTS
+// ════════════════════════════════════════
+function updateCounts() {
+  document.getElementById('district-count').textContent = runtimeData.districts.length + ' districts';
+  document.getElementById('npc-count').textContent = runtimeData.npcs.length + ' individuals';
+  document.getElementById('corp-count').textContent = runtimeData.corporations.length + ' entities';
+  document.getElementById('loc-count').textContent = runtimeData.locations.length + ' locations';
+  document.getElementById('session-count').textContent = runtimeData.sessions.length + ' runs';
+}
+
+// ════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════
+function exportData() {
+  const out = `// ============================================================
+//  CITY WIKI DATA FILE — Generated ${new Date().toISOString().slice(0,10)}
+// ============================================================
+
+const CITY_NAME = ${JSON.stringify(CITY_NAME)};
+const CITY_TAGLINE = ${JSON.stringify(CITY_TAGLINE)};
+
+const districts = ${JSON.stringify(runtimeData.districts, null, 2)};
+
+const locations = ${JSON.stringify(runtimeData.locations, null, 2)};
+
+const corporations = ${JSON.stringify(runtimeData.corporations, null, 2)};
+
+const npcs = ${JSON.stringify(runtimeData.npcs, null, 2)};
+
+const sessions = ${JSON.stringify(runtimeData.sessions, null, 2)};
+`;
+  const blob = new Blob([out], { type: 'text/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data.js';
+  a.click();
+}
+
+// ════════════════════════════════════════
+//  EMPTY STATE
+// ════════════════════════════════════════
+function emptyState(msg) {
+  return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">◈</div>${msg}</div>`;
+}
+
+// ════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════
+renderAll();
+</script>
+</body>
+</html>
