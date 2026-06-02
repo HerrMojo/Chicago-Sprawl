@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRESS — City Newspaper Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Permanent+Marker&family=Special+Elite&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════
+   GENERATOR UI (the tool itself)
+═══════════════════════════════════════ */
+:root {
+  --bg: #0a0c0e;
+  --bg2: #111418;
+  --border: #1e2530;
+  --accent: #00ffe1;
+  --accent2: #ff3c5a;
+  --text: #c8dae8;
+  --text-dim: #4a6480;
+  --mono: 'Share Tech Mono', monospace;
+  --ui: 'Oswald', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100vh;
+}
+
+/* Generator Header */
+.gen-header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.gen-title {
+  font-family: var(--ui);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.gen-subtitle { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+.paper-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.5rem 1.2rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toggle-btn.active.corp { background: #f0f4f8; color: #0a0a0a; }
+.toggle-btn.active.zine { background: #1a0a00; color: #ff6b1a; border-color: #ff6b1a; }
+
+/* Generator Body */
+.gen-body {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  min-height: calc(100vh - 57px);
+}
+
+.gen-sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.field-label {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+.field-group { display: flex; flex-direction: column; }
+
+textarea, input[type=text], input[type=number] {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 0.6rem 0.75rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+  resize: vertical;
+}
+
+textarea:focus, input:focus { border-color: var(--accent); }
+textarea::placeholder, input::placeholder { color: var(--text-dim); }
+
+.notes-area { min-height: 200px; line-height: 1.6; }
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.25rem 0;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.gen-btn {
+  background: var(--accent);
+  border: none;
+  color: #000;
+  font-family: var(--ui);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.gen-btn:hover { opacity: 0.85; }
+.gen-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.gen-btn.zine-mode { background: #ff6b1a; }
+
+.status-bar {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-align: center;
+  min-height: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.action-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sec-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+}
+
+.sec-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Preview pane */
+.gen-preview {
+  overflow: auto;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  gap: 0.75rem;
+  opacity: 0.5;
+}
+
+.preview-placeholder .ph-icon { font-size: 2.5rem; opacity: 0.3; }
+
+#output-frame {
+  width: 900px;
+  max-width: 100%;
+  background: white;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.6);
+  display: none;
+}
+
+/* Loading animation */
+.loading-dots::after {
+  content: '';
+  animation: dots 1.2s steps(4, end) infinite;
+}
+@keyframes dots {
+  0%, 100% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+
+/* ═══════════════════════════════════════
+   CORP PAPER STYLES (injected into output)
+═══════════════════════════════════════ */
+</style>
+</head>
+<body>
+
+<div class="gen-header">
+  <div>
+    <div class="gen-title">// PRESS — Newspaper Generator</div>
+    <div class="gen-subtitle">CBR+PNK Session Newspaper Tool · Paste notes, generate issue</div>
+  </div>
+  <div class="paper-toggle">
+    <button class="toggle-btn active corp" id="corp-toggle" onclick="setPaper('corp')">Corp Paper</button>
+    <button class="toggle-btn zine" id="zine-toggle" onclick="setPaper('zine')">Underground Zine</button>
+  </div>
+</div>
+
+<div class="gen-body">
+  <div class="gen-sidebar">
+
+    <div class="field-group">
+      <label class="field-label">City Name</label>
+      <input type="text" id="city-name" placeholder="[CITY]" value="[CITY]">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Publication Name</label>
+      <input type="text" id="pub-name" id="pub-name" placeholder="e.g. The Apex Courier / STATIC">
+    </div>
+
+    <hr class="divider">
+
+    <div class="field-group">
+      <label class="field-label">Session Notes *</label>
+      <textarea class="notes-area" id="session-notes" placeholder="Paste your session notes here. Include:
+— What happened (the run)
+— Who was involved (runners, NPCs)
+— Who died / got hurt
+— What corps were involved
+— Any twists or revelations
+— The outcome
+
+The AI will interpret events differently for each paper."></textarea>
+    </div>
+
+    <hr class="divider">
+
+    <div class="meta-grid">
+      <div class="field-group">
+        <label class="field-label">Issue Number</label>
+        <input type="number" id="issue-num" value="1" min="1">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date (in-world)</label>
+        <input type="text" id="issue-date" placeholder="e.g. 2087-03-14">
+      </div>
+    </div>
+
+    <!-- Corp-only fields -->
+    <div id="corp-fields">
+      <hr class="divider">
+      <div class="field-label" style="margin-bottom:0.75rem">Stock Ticker — Enter corp names &amp; share prices</div>
+      <div id="ticker-rows" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+      <button class="sec-btn" style="margin-top:0.5rem" onclick="addTickerRow()">+ Add Stock</button>
+    </div>
+
+    <hr class="divider">
+
+    <button class="gen-btn" id="gen-btn" onclick="generate()">Generate Issue</button>
+    <div class="status-bar" id="status-bar"></div>
+
+    <div class="action-row">
+      <button class="sec-btn" onclick="printOutput()">Print / Save PDF</button>
+      <button class="sec-btn" onclick="copyHTML()">Copy HTML</button>
+    </div>
+
+  </div>
+
+  <div class="gen-preview" id="gen-preview">
+    <div class="preview-placeholder" id="placeholder">
+      <div class="ph-icon">◈</div>
+      <div>Fill in session notes and hit Generate</div>
+      <div style="font-size:0.6rem;opacity:0.6">Two papers. One city. Different truths.</div>
+    </div>
+    <div id="output-frame"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  STATE
+// ════════════════════════════════════
+let currentPaper = 'corp';
+let generatedHTML = '';
+
+// ════════════════════════════════════
+//  PAPER TOGGLE
+// ════════════════════════════════════
+function setPaper(type) {
+  currentPaper = type;
+  document.getElementById('corp-toggle').classList.toggle('active', type === 'corp');
+  document.getElementById('zine-toggle').classList.toggle('active', type === 'zine');
+  document.getElementById('corp-fields').style.display = type === 'corp' ? 'block' : 'none';
+  document.getElementById('gen-btn').className = 'gen-btn' + (type === 'zine' ? ' zine-mode' : '');
+  document.getElementById('pub-name').placeholder = type === 'corp' ? 'e.g. The Apex Courier' : 'e.g. STATIC / GLITCH / THE REAL';
+}
+
+// ════════════════════════════════════
+//  TICKER ROWS
+// ════════════════════════════════════
+function addTickerRow(name = '', price = '', change = '') {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:0.4rem;align-items:center';
+  row.innerHTML = `
+    <input type="text" placeholder="Corp name" value="${name}" style="font-size:0.7rem;padding:0.4rem 0.5rem">
+    <input type="text" placeholder="Price" value="${price}" style="font-size:0.7rem;padding:0.4rem 0.5rem">
+    <input type="text" placeholder="+/- %" value="${change}" style="font-size:0.7rem;padding:0.4rem 0.5rem">
+    <button onclick="this.parentElement.remove()" style="background:none;border:1px solid #1e2530;color:#4a6480;font-size:0.7rem;padding:0.3rem 0.5rem;cursor:pointer">✕</button>
+  `;
+  document.getElementById('ticker-rows').appendChild(row);
+}
+
+// Seed with 3 default rows
+addTickerRow('Vantablack Industries', '4,210', '+2.3%');
+addTickerRow('Somnium Corp', '8,540', '-0.8%');
+addTickerRow('Cascade Networks', '6,120', '+5.1%');
+
+// ════════════════════════════════════
+//  GENERATE
+// ════════════════════════════════════
+async function generate() {
+  const notes = document.getElementById('session-notes').value.trim();
+  if (!notes) { setStatus('Paste session notes first.'); return; }
+
+  const city = document.getElementById('city-name').value || '[CITY]';
+  const pub = document.getElementById('pub-name').value || (currentPaper === 'corp' ? 'THE APEX COURIER' : 'STATIC');
+  const issueNum = document.getElementById('issue-num').value || '1';
+  const issueDate = document.getElementById('issue-date').value || '20XX-XX-XX';
+
+  // Get ticker data for corp
+  let tickerData = [];
+  if (currentPaper === 'corp') {
+    document.querySelectorAll('#ticker-rows > div').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      if (inputs[0].value) tickerData.push({ name: inputs[0].value, price: inputs[1].value, change: inputs[2].value });
+    });
+  }
+
+  setStatus('Generating<span class="loading-dots"></span>');
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('placeholder').style.display = 'none';
+
+  const prompt = buildPrompt(notes, city, pub, issueNum, issueDate, tickerData);
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content?.[0]?.text || '';
+
+    // Extract HTML
+    const match = raw.match(/```html\n?([\s\S]*?)```/) || raw.match(/<html[\s\S]*<\/html>/i);
+    const html = match ? (match[1] || match[0]) : raw;
+
+    generatedHTML = html;
+    showOutput(html);
+    setStatus('Issue generated. Print or copy HTML to save.');
+  } catch (e) {
+    setStatus('Error: ' + e.message);
+    document.getElementById('placeholder').style.display = 'flex';
+  }
+
+  document.getElementById('gen-btn').disabled = false;
+}
+
+// ════════════════════════════════════
+//  PROMPTS
+// ════════════════════════════════════
+function buildPrompt(notes, city, pub, issueNum, issueDate, tickerData) {
+  if (currentPaper === 'corp') return buildCorpPrompt(notes, city, pub, issueNum, issueDate, tickerData);
+  return buildZinePrompt(notes, city, pub, issueNum, issueDate);
+}
+
+function buildCorpPrompt(notes, city, pub, issueNum, issueDate, tickerData) {
+  const tickerStr = tickerData.map(t => `${t.name}: ${t.price} (${t.change})`).join(' | ');
+  return `You are writing a corporate propaganda newspaper for a dystopian cyberpunk city called "${city}". The paper is called "${pub}", Issue #${issueNum}, Date: ${issueDate}.
+
+SESSION NOTES (what actually happened in the RPG session):
+${notes}
+
+TICKER DATA: ${tickerStr || 'Generate plausible fictional stock data'}
+
+Your job: Write the newspaper as corporate PR would spin it. Events are sanitized, runners are "terrorists" or "unidentified criminals", corporate wrongdoing is covered up or blamed on external actors, deaths of important people are glossed over or spun as accidents. The paper serves power.
+
+Generate a COMPLETE self-contained HTML newspaper page with ALL CSS embedded in a <style> tag. No external dependencies except Google Fonts.
+
+SECTIONS TO INCLUDE:
+1. Animated stock ticker (scrolling marquee at top with the ticker data — use CSS animation, NOT the <marquee> tag)
+2. Masthead / nameplate (corporate, clean, authoritative — like a real broadsheet)
+3. FRONT PAGE with lead story (the main event, corporate spin)
+4. CORPORATE PRESS RELEASE (official statement from whichever corp was involved)
+5. FINANCIAL REPORT (brief market commentary connecting events to stock movements)
+6. CITY STATUS REPORT (weather, infrastructure, "public safety" — all positive spin)
+7. WANTED LISTING (runners described as dangerous criminals, clinical language)
+8. OBITUARIES (any deaths — sanitized, appropriate eulogies for corp-friendly figures)
+9. CLASSIFIED ADS (in-world cyberpunk ads — augmentations, fixers, data brokers, always slightly sinister)
+10. OP-ED / EDITORIAL (corporate voice praising stability, order, security)
+
+DESIGN REQUIREMENTS — this must look like a REAL sleek corporate newspaper:
+- Font: 'Playfair Display' for headlines, 'Source Serif 4' for body text, 'IBM Plex Mono' for data/ticker
+- Color palette: White background (#fafafa), black text, one corporate accent color (deep navy #0a1628 or blood red #8b0000 — pick one and commit)
+- Multi-column newspaper layout (CSS grid/columns)
+- Thin rule lines separating sections (classic broadsheet style)
+- A real newspaper nameplate with publication info
+- Stock ticker: smooth scrolling CSS animation across the top, dark background strip
+- Financial chart: ASCII or CSS bar chart showing stock movements
+- Everything should feel REAL — like an actual newspaper from this world
+- The layout should be dense, editorial, professional
+- Include subtle unsettling details — the propaganda should feel almost right but slightly off
+
+Output ONLY the complete HTML. No explanation. Start with <!DOCTYPE html>.`;
+}
+
+function buildZinePrompt(notes, city, pub, issueNum, issueDate) {
+  return `You are writing an underground street zine for a dystopian cyberpunk city called "${city}". The zine is called "${pub}", Issue #${issueNum}, Date: ${issueDate}.
+
+SESSION NOTES (what actually happened in the RPG session):
+${notes}
+
+Your job: Write the TRUTH — the street-level version that the corp paper buries. Runners are named (by handle only), corps are called out directly, deaths are mourned, the powerful are accused. This is anarchic, angry, raw. The zine knows things the corp paper won't print.
+
+Generate a COMPLETE self-contained HTML zine page with ALL CSS embedded in a <style> tag. No external dependencies except Google Fonts.
+
+SECTIONS TO INCLUDE:
+1. MASTHEAD — rough, hand-made feel, the zine's name BIG and distorted
+2. FRONT PAGE / LEAD STORY — the real version of what happened, no filter
+3. STREET REPORTS — multiple short items, rumors, what people on the ground saw
+4. CORPORATE BULLSHIT WATCH — calling out the corp paper's spin, line by line
+5. OBITUARIES — real mourning for people who died, named by handle, no sanitizing
+6. WANTED — who the corps are actually hunting and why (warning to runners)  
+7. CLASSIFIED / CONTACTS — underground economy: safehouses, docs, fixers, gear
+8. OP-ED — furious, political, first-person voice from someone in the Sprawl
+9. WEATHER / CITY REALITY — what the city actually feels like on the street
+
+DESIGN REQUIREMENTS — this must feel like a REAL hand-assembled underground zine:
+- Fonts: 'Special Elite' for headlines/masthead, 'Permanent Marker' for emphasis/annotations, 'IBM Plex Mono' for body text
+- Color palette: Cream/aged paper background (#f5f0e8), dark ink (#1a1008), with ONE chaotic accent — orange (#ff6b1a) OR red (#cc2200) — used aggressively for highlights, boxes, scrawled annotations
+- Layout: DELIBERATELY rough. Misaligned columns. Rotated elements. Hand-drawn borders (CSS box-shadow tricks). Uneven spacing. Feels like it was cut and pasted.
+- Some text should look hand-written or stamped
+- Include "REDACTED" stamps (CSS-styled) over things the corps don't want known
+- Torn paper effects using CSS clip-path or borders
+- Some sections should look like they were added last minute — different styles, overlapping
+- Annotations in the margins (position:absolute, rotated slightly)
+- Everything should feel DANGEROUS to read — like holding this gets you on a list
+- Dense, angry, alive
+
+Output ONLY the complete HTML. No explanation. Start with <!DOCTYPE html>.`;
+}
+
+// ════════════════════════════════════
+//  OUTPUT
+// ════════════════════════════════════
+function showOutput(html) {
+  const frame = document.getElementById('output-frame');
+  frame.style.display = 'block';
+
+  // Use a blob URL to render the full HTML safely
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+
+  frame.innerHTML = `<iframe src="${url}" style="width:100%;height:1200px;border:none;" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+40)+'px'"></iframe>`;
+}
+
+function setStatus(msg) {
+  document.getElementById('status-bar').innerHTML = msg;
+}
+
+// ════════════════════════════════════
+//  EXPORT ACTIONS
+// ════════════════════════════════════
+function printOutput() {
+  if (!generatedHTML) { setStatus('Generate an issue first.'); return; }
+  const win = window.open('', '_blank');
+  win.document.write(generatedHTML);
+  win.document.close();
+  win.print();
+}
+
+function copyHTML() {
+  if (!generatedHTML) { setStatus('Generate an issue first.'); return; }
+  navigator.clipboard.writeText(generatedHTML).then(() => setStatus('HTML copied to clipboard.'));
+}
+
+// Init
+setPaper('corp');
+</script>
+</body>
+</html>
