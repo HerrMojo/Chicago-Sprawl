@@ -13,16 +13,24 @@ def inline_scripts(path: Path):
     return re.findall(r"<script>([\s\S]*?)</script>", text)
 
 
-def check_js(path: Path) -> None:
+def check_js_source(source: str, label: str) -> None:
+    with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as handle:
+        handle.write(source)
+        temp_path = Path(handle.name)
+    try:
+        result = subprocess.run(["node", "--check", str(temp_path)], capture_output=True, text=True)
+        if result.returncode:
+            raise AssertionError(f"JavaScript syntax error in {label}:\n{result.stderr}")
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def check_html_js(path: Path) -> None:
     scripts = inline_scripts(path)
     if not scripts:
         raise AssertionError(f"No inline JavaScript found in {path}")
-    with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as handle:
-        handle.write(scripts[-1])
-        temp_path = handle.name
-    result = subprocess.run(["node", "--check", temp_path], capture_output=True, text=True)
-    if result.returncode:
-        raise AssertionError(f"JavaScript syntax error in {path}:\n{result.stderr}")
+    for index, script in enumerate(scripts, 1):
+        check_js_source(script, f"{path} script {index}")
 
 
 def main() -> None:
@@ -35,8 +43,9 @@ def main() -> None:
     if missing:
         raise AssertionError(f"Missing required files: {', '.join(missing)}")
 
-    check_js(ROOT / "index.html")
-    check_js(ROOT / "press" / "index.html")
+    check_html_js(ROOT / "index.html")
+    check_html_js(ROOT / "press" / "index.html")
+    check_js_source((ROOT / "data.js").read_text(encoding="utf-8"), ROOT / "data.js")
 
     data = (ROOT / "data.js").read_text(encoding="utf-8")
     if "[CITY]" in data:

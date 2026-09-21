@@ -1002,9 +1002,15 @@ function resetRuntimeData() {
 }
 
 function isValidRuntimeData(value) {
+  const isObject = item => item && typeof item === 'object' && !Array.isArray(item);
+  const strings = (item, fields) => isObject(item) && fields.every(field => typeof item[field] === 'string');
+  const stringArray = item => Array.isArray(item) && item.every(entry => typeof entry === 'string');
   return value && typeof value === 'object' &&
-    ['districts', 'locations', 'corporations', 'npcs', 'sessions']
-      .every(key => Array.isArray(value[key]));
+    Array.isArray(value.districts) && value.districts.every(item => strings(item, ['id', 'name', 'type', 'description', 'controlledBy', 'firstSeen', 'notes'])) &&
+    Array.isArray(value.locations) && value.locations.every(item => strings(item, ['id', 'name', 'district', 'type', 'description', 'status', 'firstSeen', 'notes']) && stringArray(item.tags)) &&
+    Array.isArray(value.corporations) && value.corporations.every(item => strings(item, ['id', 'name', 'sector', 'description', 'status', 'firstSeen', 'notes']) && stringArray(item.knownOperations) && stringArray(item.allies) && stringArray(item.rivals)) &&
+    Array.isArray(value.npcs) && value.npcs.every(item => strings(item, ['id', 'handle', 'realName', 'status', 'role', 'affiliation', 'district', 'description', 'firstSeen', 'notes']) && stringArray(item.appearedIn) && typeof item.formerRunner === 'boolean') &&
+    Array.isArray(value.sessions) && value.sessions.every(item => strings(item, ['id', 'title', 'date', 'summary', 'outcome', 'newspaperUrl']) && stringArray(item.runners));
 }
 
 function exportJson() {
