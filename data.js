@@ -1,11 +1,11 @@
 // ============================================================
 //  CITY WIKI DATA FILE
 //  Edit this file to update your city after each session.
-//  Replace [CITY] with your city name when you have one.
+//  Chicago-Sprawl campaign setting data.
 // ============================================================
 
-const CITY_NAME = "[CITY]";
-const CITY_TAGLINE = "Population: Unknown. Corporations: Countless. Hope: Scarce.";
+const CITY_NAME = "CHICAGO-SPRAWL";
+const CITY_TAGLINE = "Lakefront megacity. Corporate towers. Hope beneath the L-tracks.";
 
 // ============================================================
 //  DISTRICTS — The zones that make up the city map

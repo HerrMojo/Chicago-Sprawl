@@ -496,6 +496,18 @@
     color: var(--accent);
   }
 
+  .inline-link {
+    background: none;
+    border: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .inline-link:hover { color: var(--text); }
+
   .detail-edit-btn {
     background: none;
     border: 1px solid var(--dim);
@@ -773,6 +785,43 @@
     transition: all 0.15s;
   }
   .btn-export:hover { background: rgba(245,166,35,0.1); }
+
+  .btn-reset {
+    background: none;
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-reset:hover { background: rgba(255,60,90,0.1); }
+
+  @media (max-width: 900px) {
+    header { padding: 0 1rem; gap: 1rem; flex-wrap: wrap; }
+    .header-brand { min-width: 0; flex: 1 1 100%; border-right: none; padding: 0.9rem 0 0.5rem; }
+    nav { order: 3; flex: 1 1 100%; overflow-x: auto; }
+    .tab-btn { padding: 0.75rem 0.9rem; font-size: 0.75rem; }
+    .header-search { position: absolute; top: 0.65rem; right: 1rem; padding: 0; }
+    .search-wrap input { width: min(42vw, 220px); }
+    main { padding: 1rem; }
+    .map-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  @media (max-width: 560px) {
+    .city-name { font-size: 1.5rem; }
+    .city-tagline { max-width: 58%; }
+    .search-wrap input { width: 42vw; }
+    .map-grid { grid-template-columns: repeat(3, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: auto; }
+    .session-card { grid-template-columns: 1fr; }
+    .session-number { writing-mode: horizontal-tb; }
+    .export-bar { align-items: flex-start; flex-direction: column; }
+  }
 </style>
 </head>
 <body>
@@ -819,6 +868,11 @@
       <div class="section-title"><span>//</span> Districts <span class="count-badge" id="district-count"></span></div>
     </div>
     <div class="card-grid" id="district-grid"></div>
+    <div class="section-header" style="margin-top:2rem">
+      <div class="section-title"><span>//</span> Recent Runs</div>
+      <button class="filter-btn" onclick="switchTab('sessions')">View Archive</button>
+    </div>
+    <div class="session-list" id="recent-session-list"></div>
   </div>
 
   <!-- ══ NPCS TAB ══ -->
@@ -869,8 +923,14 @@
       <button class="btn-add" onclick="openModal('session')">+ Log Session</button>
     </div>
     <div class="export-bar">
-      <div><strong>// DATA EXPORT</strong> — After adding entries, copy updated data to your <code>data.js</code> file to persist changes.</div>
-      <button class="btn-export" onclick="exportData()">Export data.js</button>
+      <div><strong>// DATA EXPORT</strong> — Export updated data to publish it. Browser edits are autosaved locally.</div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button class="btn-reset" onclick="resetRuntimeData()">Reset Local Edits</button>
+        <button class="btn-export" onclick="exportJson()">Backup JSON</button>
+        <button class="btn-export" onclick="document.getElementById('json-import').click()">Import JSON</button>
+        <button class="btn-export" onclick="exportData()">Export data.js</button>
+        <input id="json-import" type="file" accept="application/json,.json" hidden onchange="importJson(event)">
+      </div>
     </div>
     <div class="session-list" id="session-list"></div>
   </div>
@@ -904,6 +964,94 @@ let runtimeData = {
   npcs: [...npcs],
   sessions: [...sessions]
 };
+
+const STORAGE_KEY = `cbrpnk-city-wiki:${CITY_NAME}:runtime`;
+
+function saveRuntimeData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(runtimeData));
+  } catch (e) {
+    console.warn('Unable to save local wiki edits:', e);
+  }
+}
+
+function loadRuntimeData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    ['districts', 'locations', 'corporations', 'npcs', 'sessions'].forEach(key => {
+      if (Array.isArray(parsed[key])) runtimeData[key] = parsed[key];
+    });
+  } catch (e) {
+    console.warn('Unable to restore local wiki edits:', e);
+  }
+}
+
+function resetRuntimeData() {
+  if (!confirm('Reset local edits and restore the published data?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  runtimeData = {
+    districts: [...districts],
+    locations: [...locations],
+    corporations: [...corporations],
+    npcs: [...npcs],
+    sessions: [...sessions]
+  };
+  renderAll();
+}
+
+function isValidRuntimeData(value) {
+  return value && typeof value === 'object' &&
+    ['districts', 'locations', 'corporations', 'npcs', 'sessions']
+      .every(key => Array.isArray(value[key]));
+}
+
+function exportJson() {
+  const out = JSON.stringify({
+    format: 'cbrpnk-city-wiki',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    city: CITY_NAME,
+    data: runtimeData
+  }, null, 2);
+  const blob = new Blob([out], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${CITY_NAME.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-backup.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJson(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  if (!confirm('Importing a backup will replace the current browser data. Continue?')) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const imported = parsed?.data || parsed;
+      if (!isValidRuntimeData(imported)) throw new Error('Missing campaign data collections.');
+      runtimeData = {
+        districts: imported.districts,
+        locations: imported.locations,
+        corporations: imported.corporations,
+        npcs: imported.npcs,
+        sessions: imported.sessions
+      };
+      saveRuntimeData();
+      renderAll();
+    } catch (error) {
+      alert(`Unable to import backup: ${error.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
+loadRuntimeData();
 
 // ════════════════════════════════════════
 //  INIT
@@ -962,8 +1110,8 @@ function renderMap() {
       const dangerColor = d.dangerLevel >= 4 ? 'var(--accent2)' : d.dangerLevel >= 3 ? 'var(--accent3)' : 'var(--text-dim)';
       cell.innerHTML = `
         <span class="map-zone-danger" style="color:${dangerColor}">${'█'.repeat(d.dangerLevel)}</span>
-        <div class="map-zone-name">${d.name}</div>
-        <div class="map-zone-type">${d.type}</div>
+        <div class="map-zone-name">${esc(d.name)}</div>
+        <div class="map-zone-type">${esc(d.type)}</div>
       `;
       cell.onclick = () => showDetail('district', d.id);
     } else {
@@ -975,23 +1123,28 @@ function renderMap() {
   const dg = document.getElementById('district-grid');
   const filtered = runtimeData.districts.filter(d => matchSearch(d, ['name','type','description','controlledBy']));
   dg.innerHTML = filtered.length ? filtered.map(d => districtCard(d)).join('') : emptyState('No districts found');
+
+  const recent = [...runtimeData.sessions].reverse().slice(0, 3);
+  document.getElementById('recent-session-list').innerHTML = recent.length
+    ? recent.map(sessionCard).join('')
+    : emptyState('No runs logged yet');
 }
 
 function districtCard(d) {
   const dangerColor = d.dangerLevel >= 4 ? 'var(--accent2)' : d.dangerLevel >= 3 ? 'var(--accent3)' : 'var(--accent)';
   return `
-  <div class="card" onclick="showDetail('district','${d.id}')">
-    <div class="card-handle">${d.name}</div>
+  <div class="card" onclick="showDetail('district',${jsString(d.id)})">
+    <div class="card-handle">${esc(d.name)}</div>
     <div class="card-meta">
-      <span class="meta-item">${d.type}</span>
-      <span class="meta-item">Control: ${d.controlledBy}</span>
-      <span class="meta-item">First seen: ${d.firstSeen}</span>
+      <span class="meta-item">${esc(d.type)}</span>
+      <span class="meta-item">Control: ${esc(d.controlledBy)}</span>
+      <span class="meta-item">First seen: ${esc(d.firstSeen)}</span>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
       <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">DANGER</span>
       <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=d.dangerLevel?'filled danger':''}"></div>`).join('')}</div>
     </div>
-    <div class="card-desc">${d.description}</div>
+    <div class="card-desc">${esc(d.description)}</div>
   </div>`;
 }
 
@@ -1011,21 +1164,21 @@ function renderNPCs() {
 
 function npcCard(n) {
   return `
-  <div class="card" onclick="showDetail('npc','${n.id}')">
+  <div class="card" onclick="showDetail('npc',${jsString(n.id)})">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.25rem">
-      <div class="card-handle">${n.handle}</div>
+      <div class="card-handle">${esc(n.handle)}</div>
       <div style="display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:flex-end">
-        <span class="status status-${n.status.toLowerCase()}">${n.status}</span>
+        <span class="status status-${statusClass(n.status)}">${esc(n.status)}</span>
         ${n.formerRunner ? '<span class="runner-badge">Runner</span>' : ''}
       </div>
     </div>
     <div class="card-meta">
-      <span class="meta-item">${n.role}</span>
-      <span class="meta-item">${n.affiliation}</span>
-      <span class="meta-item">${n.district}</span>
+      <span class="meta-item">${esc(n.role)}</span>
+      <span class="meta-item">${esc(n.affiliation)}</span>
+      <span class="meta-item">${esc(n.district)}</span>
     </div>
-    <div class="card-desc">${n.description}</div>
-    <div class="card-tags"><span class="tag">First seen: ${n.firstSeen}</span></div>
+    <div class="card-desc">${esc(n.description)}</div>
+    <div class="card-tags"><span class="tag">First seen: ${esc(n.firstSeen)}</span></div>
   </div>`;
 }
 
@@ -1044,21 +1197,21 @@ function renderCorps() {
 
 function corpCard(c) {
   return `
-  <div class="card" onclick="showDetail('corp','${c.id}')">
+  <div class="card" onclick="showDetail('corp',${jsString(c.id)})">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.25rem">
-      <div class="card-handle">${c.name}</div>
-      <span class="status status-${c.status.toLowerCase()}">${c.status}</span>
+      <div class="card-handle">${esc(c.name)}</div>
+      <span class="status status-${statusClass(c.status)}">${esc(c.status)}</span>
     </div>
     <div class="card-meta">
-      <span class="meta-item">${c.sector}</span>
-      <span class="meta-item">First seen: ${c.firstSeen}</span>
+      <span class="meta-item">${esc(c.sector)}</span>
+      <span class="meta-item">First seen: ${esc(c.firstSeen)}</span>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
       <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">POWER</span>
       <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=c.powerLevel?'filled':''}"></div>`).join('')}</div>
     </div>
-    <div class="card-desc">${c.description}</div>
-    <div class="card-tags">${c.knownOperations.slice(0,3).map(op=>`<span class="tag">${op}</span>`).join('')}</div>
+    <div class="card-desc">${esc(c.description)}</div>
+    <div class="card-tags">${c.knownOperations.slice(0,3).map(op=>`<span class="tag">${esc(op)}</span>`).join('')}</div>
   </div>`;
 }
 
@@ -1077,18 +1230,18 @@ function renderLocations() {
 
 function locCard(l) {
   return `
-  <div class="card" onclick="showDetail('location','${l.id}')">
+  <div class="card" onclick="showDetail('location',${jsString(l.id)})">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.25rem">
-      <div class="card-handle">${l.name}</div>
-      <span class="status status-${l.status.toLowerCase()}">${l.status}</span>
+      <div class="card-handle">${esc(l.name)}</div>
+      <span class="status status-${statusClass(l.status)}">${esc(l.status)}</span>
     </div>
     <div class="card-meta">
-      <span class="meta-item">${l.type}</span>
-      <span class="meta-item">${l.district}</span>
-      <span class="meta-item">First seen: ${l.firstSeen}</span>
+      <span class="meta-item">${esc(l.type)}</span>
+      <span class="meta-item">${esc(l.district)}</span>
+      <span class="meta-item">First seen: ${esc(l.firstSeen)}</span>
     </div>
-    <div class="card-desc">${l.description}</div>
-    <div class="card-tags">${l.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    <div class="card-desc">${esc(l.description)}</div>
+    <div class="card-tags">${l.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
   </div>`;
 }
 
@@ -1102,16 +1255,17 @@ function renderSessions() {
 
 function sessionCard(s) {
   return `
-  <div class="session-card">
-    <div class="session-number">${s.id.toUpperCase()}</div>
+  <div class="session-card" onclick="showDetail('session',${jsString(s.id)})">
+    <div class="session-number">${esc(String(s.id).toUpperCase())}</div>
     <div>
-      <div class="session-title">${s.title}</div>
-      ${s.date ? `<div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);margin-bottom:0.4rem">${s.date}</div>` : ''}
-      <div class="session-summary">${s.summary}</div>
-      ${s.runners.length ? `<div class="card-tags" style="margin-top:0.5rem">${s.runners.map(r=>`<span class="tag">Runner: ${r}</span>`).join('')}</div>` : ''}
+      <div class="session-title">${esc(s.title)}</div>
+      ${s.date ? `<div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);margin-bottom:0.4rem">${esc(s.date)}</div>` : ''}
+      <div class="session-summary">${esc(s.summary)}</div>
+      ${s.outcome ? `<div class="card-tags" style="margin-top:0.5rem"><span class="tag">Outcome: ${esc(s.outcome)}</span></div>` : ''}
+      ${s.runners.length ? `<div class="card-tags" style="margin-top:0.5rem">${s.runners.map(r=>`<span class="tag">Runner: ${esc(r)}</span>`).join('')}</div>` : ''}
     </div>
     <div>
-      ${s.newspaperUrl ? `<a class="session-link" href="${s.newspaperUrl}" target="_blank">📰 Read Issue</a>` : '<span style="font-family:var(--mono);font-size:0.6rem;color:var(--dim)">No issue yet</span>'}
+      ${safeUrl(s.newspaperUrl) ? `<a class="session-link" href="${esc(safeUrl(s.newspaperUrl))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">📰 Read Issue</a>` : '<span style="font-family:var(--mono);font-size:0.6rem;color:var(--dim)">No issue yet</span>'}
     </div>
   </div>`;
 }
@@ -1124,14 +1278,14 @@ function buildFilters() {
   const sectors = [...new Set(runtimeData.corporations.map(c => c.sector))];
   const cf = document.getElementById('corp-filters');
   cf.innerHTML = `<button class="filter-btn ${activeFilters.corps==='all'?'active':''}" data-filter="all">All</button>` +
-    sectors.map(s => `<button class="filter-btn ${activeFilters.corps===s?'active':''}" data-filter="${s}">${s}</button>`).join('');
+    sectors.map(s => `<button class="filter-btn ${activeFilters.corps===s?'active':''}" data-filter="${esc(s)}">${esc(s)}</button>`).join('');
   cf.querySelectorAll('.filter-btn').forEach(b => b.onclick = () => { activeFilters.corps = b.dataset.filter; renderAll(); });
 
   // Location districts
   const ds = [...new Set(runtimeData.locations.map(l => l.district))];
   const lf = document.getElementById('loc-filters');
   lf.innerHTML = `<button class="filter-btn ${activeFilters.locations==='all'?'active':''}" data-filter="all">All</button>` +
-    ds.map(d => `<button class="filter-btn ${activeFilters.locations===d?'active':''}" data-filter="${d}">${d}</button>`).join('');
+    ds.map(d => `<button class="filter-btn ${activeFilters.locations===d?'active':''}" data-filter="${esc(d)}">${esc(d)}</button>`).join('');
   lf.querySelectorAll('.filter-btn').forEach(b => b.onclick = () => { activeFilters.locations = b.dataset.filter; renderAll(); });
 
   // NPC filters
@@ -1155,22 +1309,22 @@ function showDetail(type, id) {
     html = `
       <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
       <div>
-        <div class="detail-title">${n.handle}</div>
-        <div class="detail-subtitle">${n.realName !== 'Unknown' ? n.realName + ' · ' : ''}${n.role} · ${n.affiliation}</div>
+        <div class="detail-title">${esc(n.handle)}</div>
+        <div class="detail-subtitle">${n.realName !== 'Unknown' ? esc(n.realName) + ' · ' : ''}${esc(n.role)} · ${esc(n.affiliation)}</div>
       </div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-        <span class="status status-${n.status.toLowerCase()}">${n.status}</span>
+        <span class="status status-${statusClass(n.status)}">${esc(n.status)}</span>
         ${n.formerRunner ? '<span class="runner-badge">Former Runner</span>' : ''}
       </div>
-      <div><div class="detail-section-label">Profile</div><div class="detail-text">${n.description}</div></div>
-      <div><div class="detail-section-label">Location</div><div class="detail-text">${n.district}</div></div>
+      <div><div class="detail-section-label">Profile</div><div class="detail-text">${esc(n.description)}</div></div>
+      <div><div class="detail-section-label">Location</div><div class="detail-text">${esc(n.district)}</div></div>
       <div>
         <div class="detail-section-label">Appeared In</div>
-        <ul class="detail-list">${n.appearedIn.map(s=>`<li>${s}</li>`).join('')}</ul>
+        <ul class="detail-list">${n.appearedIn.map(s=>sessionReference(s)).join('')}</ul>
       </div>
-      ${n.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${n.notes}</div></div>` : ''}
-      <div><div class="detail-section-label">First Seen</div><div class="detail-text" style="font-family:var(--mono);font-size:0.8rem">${n.firstSeen}</div></div>
-      <button class="detail-edit-btn" onclick="openEditModal('npc','${id}')">✎ Edit Entry</button>
+      ${n.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${esc(n.notes)}</div></div>` : ''}
+      <div><div class="detail-section-label">First Seen</div><div class="detail-text" style="font-family:var(--mono);font-size:0.8rem">${esc(n.firstSeen)}</div></div>
+      <button class="detail-edit-btn" onclick="openEditModal('npc',${jsString(id)})">✎ Edit Entry</button>
     `;
   } else if (type === 'corp') {
     const c = runtimeData.corporations.find(x => x.id === id);
@@ -1178,25 +1332,25 @@ function showDetail(type, id) {
     html = `
       <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
       <div>
-        <div class="detail-title">${c.name}</div>
-        <div class="detail-subtitle">${c.sector}</div>
+        <div class="detail-title">${esc(c.name)}</div>
+        <div class="detail-subtitle">${esc(c.sector)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:0.75rem">
-        <span class="status status-${c.status.toLowerCase()}">${c.status}</span>
+        <span class="status status-${statusClass(c.status)}">${esc(c.status)}</span>
         <div style="display:flex;align-items:center;gap:0.4rem">
           <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim)">POWER</span>
           <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=c.powerLevel?'filled':''}" style="width:10px;height:10px"></div>`).join('')}</div>
         </div>
       </div>
-      <div><div class="detail-section-label">Overview</div><div class="detail-text">${c.description}</div></div>
+      <div><div class="detail-section-label">Overview</div><div class="detail-text">${esc(c.description)}</div></div>
       <div>
         <div class="detail-section-label">Known Operations</div>
-        <ul class="detail-list">${c.knownOperations.map(op=>`<li>${op}</li>`).join('')}</ul>
+        <ul class="detail-list">${c.knownOperations.map(op=>`<li>${esc(op)}</li>`).join('')}</ul>
       </div>
-      ${c.allies.length ? `<div><div class="detail-section-label">Allied With</div><ul class="detail-list">${c.allies.map(a=>`<li>${a}</li>`).join('')}</ul></div>` : ''}
-      ${c.rivals.length ? `<div><div class="detail-section-label">Rivals</div><ul class="detail-list">${c.rivals.map(r=>`<li>${r}</li>`).join('')}</ul></div>` : ''}
-      ${c.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${c.notes}</div></div>` : ''}
-      <button class="detail-edit-btn" onclick="openEditModal('corp','${id}')">✎ Edit Entry</button>
+      ${c.allies.length ? `<div><div class="detail-section-label">Allied With</div><ul class="detail-list">${c.allies.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}
+      ${c.rivals.length ? `<div><div class="detail-section-label">Rivals</div><ul class="detail-list">${c.rivals.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
+      ${c.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${esc(c.notes)}</div></div>` : ''}
+      <button class="detail-edit-btn" onclick="openEditModal('corp',${jsString(id)})">✎ Edit Entry</button>
     `;
   } else if (type === 'location') {
     const l = runtimeData.locations.find(x => x.id === id);
@@ -1204,18 +1358,18 @@ function showDetail(type, id) {
     html = `
       <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
       <div>
-        <div class="detail-title">${l.name}</div>
-        <div class="detail-subtitle">${l.type} · ${l.district}</div>
+        <div class="detail-title">${esc(l.name)}</div>
+        <div class="detail-subtitle">${esc(l.type)} · ${esc(l.district)}</div>
       </div>
-      <span class="status status-${l.status.toLowerCase()}">${l.status}</span>
-      <div><div class="detail-section-label">Description</div><div class="detail-text">${l.description}</div></div>
+      <span class="status status-${statusClass(l.status)}">${esc(l.status)}</span>
+      <div><div class="detail-section-label">Description</div><div class="detail-text">${esc(l.description)}</div></div>
       <div>
         <div class="detail-section-label">Tags</div>
-        <div class="card-tags">${l.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        <div class="card-tags">${l.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
       </div>
-      ${l.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${l.notes}</div></div>` : ''}
-      <div><div class="detail-section-label">First Seen</div><div class="detail-text" style="font-family:var(--mono);font-size:0.8rem">${l.firstSeen}</div></div>
-      <button class="detail-edit-btn" onclick="openEditModal('location','${id}')">✎ Edit Entry</button>
+      ${l.notes ? `<div><div class="detail-section-label">Notes</div><div class="detail-text">${esc(l.notes)}</div></div>` : ''}
+      <div><div class="detail-section-label">First Seen</div><div class="detail-text" style="font-family:var(--mono);font-size:0.8rem">${esc(l.firstSeen)}</div></div>
+      <button class="detail-edit-btn" onclick="openEditModal('location',${jsString(id)})">✎ Edit Entry</button>
     `;
   } else if (type === 'district') {
     const d = runtimeData.districts.find(x => x.id === id);
@@ -1224,17 +1378,35 @@ function showDetail(type, id) {
     html = `
       <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
       <div>
-        <div class="detail-title">${d.name}</div>
-        <div class="detail-subtitle">${d.type} · Controlled by ${d.controlledBy}</div>
+        <div class="detail-title">${esc(d.name)}</div>
+        <div class="detail-subtitle">${esc(d.type)} · Controlled by ${esc(d.controlledBy)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem">
         <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim)">DANGER</span>
         <div class="pips">${[1,2,3,4,5].map(i=>`<div class="pip ${i<=d.dangerLevel?'filled danger':''}" style="width:10px;height:10px"></div>`).join('')}</div>
       </div>
-      <div><div class="detail-section-label">Description</div><div class="detail-text">${d.description}</div></div>
-      ${locs.length ? `<div><div class="detail-section-label">Known Locations (${locs.length})</div><ul class="detail-list">${locs.map(l=>`<li>${l.name} <span style="color:var(--dim)">· ${l.type}</span></li>`).join('')}</ul></div>` : ''}
-      ${d.notes ? `<div><div class="detail-section-label">GM Notes</div><div class="detail-text">${d.notes}</div></div>` : ''}
-      <button class="detail-edit-btn" onclick="openEditModal('district','${id}')">✎ Edit Entry</button>
+      <div><div class="detail-section-label">Description</div><div class="detail-text">${esc(d.description)}</div></div>
+      ${locs.length ? `<div><div class="detail-section-label">Known Locations (${locs.length})</div><ul class="detail-list">${locs.map(l=>`<li>${esc(l.name)} <span style="color:var(--dim)">· ${esc(l.type)}</span></li>`).join('')}</ul></div>` : ''}
+      ${d.notes ? `<div><div class="detail-section-label">GM Notes</div><div class="detail-text">${esc(d.notes)}</div></div>` : ''}
+      <button class="detail-edit-btn" onclick="openEditModal('district',${jsString(id)})">✎ Edit Entry</button>
+    `;
+  } else if (type === 'session') {
+    const s = runtimeData.sessions.find(x => x.id === id);
+    if (!s) return;
+    html = `
+      <button class="detail-close" onclick="closeDetailDirect()">✕ CLOSE</button>
+      <div>
+        <div class="detail-title">${esc(s.title)}</div>
+        <div class="detail-subtitle">${esc(s.id)}${s.date ? ` · ${esc(s.date)}` : ''}</div>
+      </div>
+      ${s.outcome ? `<span class="status status-active">${esc(s.outcome)}</span>` : ''}
+      <div><div class="detail-section-label">Summary</div><div class="detail-text">${esc(s.summary || 'No summary recorded.')}</div></div>
+      ${s.runners.length ? `<div><div class="detail-section-label">Runners</div><ul class="detail-list">${s.runners.map(r => runnerReference(r)).join('')}</ul></div>` : ''}
+      ${safeUrl(s.newspaperUrl) ? `<div><div class="detail-section-label">Newspaper</div><a class="session-link" href="${esc(safeUrl(s.newspaperUrl))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">📰 Read Issue</a></div>` : ''}
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button class="detail-edit-btn" onclick="openEditModal('session',${jsString(id)})">✎ Edit Session</button>
+        <button class="btn-reset" onclick="deleteEntry('session',${jsString(id)})">Delete Session</button>
+      </div>
     `;
   }
 
@@ -1258,7 +1430,7 @@ function openModal(type, editData = null) {
   const isEdit = !!editData;
   const title = isEdit ? `Edit ${type.toUpperCase()}` : `Add ${type.toUpperCase()}`;
 
-  const districtOptions = runtimeData.districts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+  const districtOptions = runtimeData.districts.map(d => `<option value="${esc(d.name)}">${esc(d.name)}</option>`).join('');
 
   let formHtml = `<div class="modal-title">// ${title}</div>`;
 
@@ -1268,17 +1440,17 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>Handle *</label>
-        <input id="f-handle" value="${n.handle||''}" placeholder="Street name / callsign">
+        <input id="f-handle" value="${esc(n.handle||'')}" placeholder="Street name / callsign">
       </div>
       <div class="form-group">
         <label>Real Name</label>
-        <input id="f-realname" value="${n.realName||'Unknown'}" placeholder="Unknown">
+        <input id="f-realname" value="${esc(n.realName||'Unknown')}" placeholder="Unknown">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Role *</label>
-        <input id="f-role" value="${n.role||''}" placeholder="Fixer, Street Doc, Enforcer…">
+        <input id="f-role" value="${esc(n.role||'')}" placeholder="Fixer, Street Doc, Enforcer…">
       </div>
       <div class="form-group">
         <label>Status</label>
@@ -1290,7 +1462,7 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>Affiliation</label>
-        <input id="f-affil" value="${n.affiliation||'Independent'}" placeholder="Corp, gang, independent…">
+        <input id="f-affil" value="${esc(n.affiliation||'Independent')}" placeholder="Corp, gang, independent…">
       </div>
       <div class="form-group">
         <label>District</label>
@@ -1300,7 +1472,7 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>First Seen</label>
-        <input id="f-firstseen" value="${n.firstSeen||'Session 1'}" placeholder="Session #">
+        <input id="f-firstseen" value="${esc(n.firstSeen||'Session 1')}" placeholder="Session #">
       </div>
       <div class="form-group">
         <label>Former Runner?</label>
@@ -1309,15 +1481,15 @@ function openModal(type, editData = null) {
     </div>
     <div class="form-group full">
       <label>Description *</label>
-      <textarea id="f-desc" placeholder="Who are they? What do they want?">${n.description||''}</textarea>
+      <textarea id="f-desc" placeholder="Who are they? What do they want?">${esc(n.description||'')}</textarea>
     </div>
     <div class="form-group full">
       <label>Appeared In (comma-separated sessions)</label>
-      <input id="f-appeared" value="${(n.appearedIn||[]).join(', ')}" placeholder="Session 1, Session 2">
+      <input id="f-appeared" value="${esc((n.appearedIn||[]).join(', '))}" placeholder="Session 1, Session 2">
     </div>
     <div class="form-group full">
       <label>GM Notes</label>
-      <textarea id="f-notes" placeholder="Private notes…">${n.notes||''}</textarea>
+      <textarea id="f-notes" placeholder="Private notes…">${esc(n.notes||'')}</textarea>
     </div>`;
 
   } else if (type === 'corp') {
@@ -1326,11 +1498,11 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>Corporation Name *</label>
-        <input id="f-name" value="${c.name||''}" placeholder="Corp name">
+        <input id="f-name" value="${esc(c.name||'')}" placeholder="Corp name">
       </div>
       <div class="form-group">
         <label>Sector *</label>
-        <input id="f-sector" value="${c.sector||''}" placeholder="Security, Biotech, Data…">
+        <input id="f-sector" value="${esc(c.sector||'')}" placeholder="Security, Biotech, Data…">
       </div>
     </div>
     <div class="form-row">
@@ -1345,29 +1517,29 @@ function openModal(type, editData = null) {
     </div>
     <div class="form-group full">
       <label>Description *</label>
-      <textarea id="f-desc" placeholder="What do they do? What makes them dangerous?">${c.description||''}</textarea>
+      <textarea id="f-desc" placeholder="What do they do? What makes them dangerous?">${esc(c.description||'')}</textarea>
     </div>
     <div class="form-group full">
       <label>Known Operations (comma-separated)</label>
-      <input id="f-ops" value="${(c.knownOperations||[]).join(', ')}" placeholder="Weapons R&D, Data brokering…">
+      <input id="f-ops" value="${esc((c.knownOperations||[]).join(', '))}" placeholder="Weapons R&D, Data brokering…">
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Allies (comma-separated)</label>
-        <input id="f-allies" value="${(c.allies||[]).join(', ')}">
+        <input id="f-allies" value="${esc((c.allies||[]).join(', '))}">
       </div>
       <div class="form-group">
         <label>Rivals (comma-separated)</label>
-        <input id="f-rivals" value="${(c.rivals||[]).join(', ')}">
+        <input id="f-rivals" value="${esc((c.rivals||[]).join(', '))}">
       </div>
     </div>
     <div class="form-group full">
       <label>First Seen</label>
-      <input id="f-firstseen" value="${c.firstSeen||'Session 1'}">
+      <input id="f-firstseen" value="${esc(c.firstSeen||'Session 1')}">
     </div>
     <div class="form-group full">
       <label>GM Notes</label>
-      <textarea id="f-notes">${c.notes||''}</textarea>
+      <textarea id="f-notes">${esc(c.notes||'')}</textarea>
     </div>`;
 
   } else if (type === 'location') {
@@ -1376,11 +1548,11 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>Location Name *</label>
-        <input id="f-name" value="${l.name||''}" placeholder="Name">
+        <input id="f-name" value="${esc(l.name||'')}" placeholder="Name">
       </div>
       <div class="form-group">
         <label>Type</label>
-        <input id="f-type" value="${l.type||''}" placeholder="Bar, HQ, Clinic, Market…">
+        <input id="f-type" value="${esc(l.type||'')}" placeholder="Bar, HQ, Clinic, Market…">
       </div>
     </div>
     <div class="form-row">
@@ -1395,19 +1567,19 @@ function openModal(type, editData = null) {
     </div>
     <div class="form-group full">
       <label>Description *</label>
-      <textarea id="f-desc" placeholder="What is this place? What goes on here?">${l.description||''}</textarea>
+      <textarea id="f-desc" placeholder="What is this place? What goes on here?">${esc(l.description||'')}</textarea>
     </div>
     <div class="form-group full">
       <label>Tags (comma-separated)</label>
-      <input id="f-tags" value="${(l.tags||[]).join(', ')}" placeholder="safe, neutral ground, runner hangout…">
+      <input id="f-tags" value="${esc((l.tags||[]).join(', '))}" placeholder="safe, neutral ground, runner hangout…">
     </div>
     <div class="form-group full">
       <label>First Seen</label>
-      <input id="f-firstseen" value="${l.firstSeen||'Session 1'}">
+      <input id="f-firstseen" value="${esc(l.firstSeen||'Session 1')}">
     </div>
     <div class="form-group full">
       <label>GM Notes</label>
-      <textarea id="f-notes">${l.notes||''}</textarea>
+      <textarea id="f-notes">${esc(l.notes||'')}</textarea>
     </div>`;
 
   } else if (type === 'district') {
@@ -1416,17 +1588,17 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>District Name *</label>
-        <input id="f-name" value="${d.name||''}" placeholder="Name">
+        <input id="f-name" value="${esc(d.name||'')}" placeholder="Name">
       </div>
       <div class="form-group">
         <label>Type</label>
-        <input id="f-type" value="${d.type||''}" placeholder="Residential, Industrial, Corporate…">
+        <input id="f-type" value="${esc(d.type||'')}" placeholder="Residential, Industrial, Corporate…">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Controlled By</label>
-        <input id="f-control" value="${d.controlledBy||'Contested'}" placeholder="Corp, gang, contested…">
+        <input id="f-control" value="${esc(d.controlledBy||'Contested')}" placeholder="Corp, gang, contested…">
       </div>
       <div class="form-group">
         <label>Danger Level (1–5)</label>
@@ -1435,7 +1607,7 @@ function openModal(type, editData = null) {
     </div>
     <div class="form-group full">
       <label>Description *</label>
-      <textarea id="f-desc" placeholder="What is this district like? Who lives here?">${d.description||''}</textarea>
+      <textarea id="f-desc" placeholder="What is this district like? Who lives here?">${esc(d.description||'')}</textarea>
     </div>
     <div class="form-group full">
       <label>First Seen</label>
@@ -1443,7 +1615,7 @@ function openModal(type, editData = null) {
     </div>
     <div class="form-group full">
       <label>GM Notes</label>
-      <textarea id="f-notes">${d.notes||''}</textarea>
+      <textarea id="f-notes">${esc(d.notes||'')}</textarea>
     </div>`;
 
   } else if (type === 'session') {
@@ -1452,28 +1624,32 @@ function openModal(type, editData = null) {
     <div class="form-row">
       <div class="form-group">
         <label>Session ID *</label>
-        <input id="f-sid" value="${s.id||'s'+(runtimeData.sessions.length)}" placeholder="s1, s2…">
+        <input id="f-sid" value="${esc(s.id||'s'+(runtimeData.sessions.length))}" placeholder="s1, s2…">
       </div>
       <div class="form-group">
         <label>Date</label>
-        <input id="f-date" type="date" value="${s.date||''}">
+        <input id="f-date" type="date" value="${esc(s.date||'')}">
       </div>
     </div>
     <div class="form-group full">
       <label>Title *</label>
-      <input id="f-title" value="${s.title||''}" placeholder="Session 1 — The Name of the Run">
+      <input id="f-title" value="${esc(s.title||'')}" placeholder="Session 1 — The Name of the Run">
     </div>
     <div class="form-group full">
       <label>Summary</label>
-      <textarea id="f-summary" placeholder="What happened in this run?">${s.summary||''}</textarea>
+      <textarea id="f-summary" placeholder="What happened in this run?">${esc(s.summary||'')}</textarea>
+    </div>
+    <div class="form-group full">
+      <label>Outcome</label>
+      <input id="f-outcome" value="${esc(s.outcome||'')}" placeholder="Success, partial success, disaster…">
     </div>
     <div class="form-group full">
       <label>Runner Handles (comma-separated)</label>
-      <input id="f-runners" value="${(s.runners||[]).join(', ')}" placeholder="Ghost, Razor, Null…">
+      <input id="f-runners" value="${esc((s.runners||[]).join(', '))}" placeholder="Ghost, Razor, Null…">
     </div>
     <div class="form-group full">
       <label>Newspaper URL (if published)</label>
-      <input id="f-url" value="${s.newspaperUrl||''}" placeholder="https://…">
+      <input id="f-url" value="${esc(s.newspaperUrl||'')}" placeholder="https://…">
     </div>`;
   }
 
@@ -1502,7 +1678,21 @@ function openEditModal(type, id) {
   else if (type === 'corp') item = runtimeData.corporations.find(x => x.id === id);
   else if (type === 'location') item = runtimeData.locations.find(x => x.id === id);
   else if (type === 'district') item = runtimeData.districts.find(x => x.id === id);
+  else if (type === 'session') item = runtimeData.sessions.find(x => x.id === id);
   if (item) openModal(type, item);
+}
+
+function deleteEntry(type, id) {
+  const labels = { district: 'district', location: 'location', corp: 'corporation', npc: 'NPC', session: 'session' };
+  if (!confirm(`Delete this ${labels[type] || 'entry'}? This cannot be undone.`)) return;
+  const collection = {
+    district: 'districts', location: 'locations', corp: 'corporations', npc: 'npcs', session: 'sessions'
+  }[type];
+  if (!collection) return;
+  runtimeData[collection] = runtimeData[collection].filter(item => item.id !== id);
+  saveRuntimeData();
+  closeDetailDirect();
+  renderAll();
 }
 
 function closeModal(e) {
@@ -1514,9 +1704,47 @@ function closeModalDirect() {
 
 function g(id) { return document.getElementById(id)?.value?.trim() || ''; }
 function gArr(id) { return g(id).split(',').map(s=>s.trim()).filter(Boolean); }
+function boundedNumber(id, fallback) {
+  const value = Number.parseInt(g(id), 10);
+  return Number.isFinite(value) ? Math.min(5, Math.max(1, value)) : fallback;
+}
+
+function validHttpUrl(value) {
+  if (!value) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (_) {
+    return false;
+  }
+}
 
 function submitForm(type, editId) {
   const isEdit = !!editId;
+
+  const required = {
+    npc: ['f-handle', 'f-role', 'f-desc'],
+    corp: ['f-name', 'f-sector', 'f-desc'],
+    location: ['f-name', 'f-desc'],
+    district: ['f-name', 'f-desc'],
+    session: ['f-sid', 'f-title']
+  }[type] || [];
+  if (required.some(id => !g(id))) {
+    alert('Please complete all required fields.');
+    return;
+  }
+  if (type === 'session') {
+    const sessionId = g('f-sid');
+    const duplicate = runtimeData.sessions.some(s => s.id === sessionId && s.id !== editId);
+    if (duplicate) {
+      alert('That session ID is already in use.');
+      return;
+    }
+    if (!validHttpUrl(g('f-url'))) {
+      alert('Newspaper URL must use http:// or https://.');
+      return;
+    }
+  }
 
   if (type === 'npc') {
     const obj = {
@@ -1542,7 +1770,7 @@ function submitForm(type, editId) {
       name: g('f-name') || 'Unknown Corp',
       sector: g('f-sector') || 'Unknown',
       description: g('f-desc') || '',
-      powerLevel: parseInt(g('f-power')) || 3,
+      powerLevel: boundedNumber('f-power', 3),
       knownOperations: gArr('f-ops'),
       allies: gArr('f-allies'),
       rivals: gArr('f-rivals'),
@@ -1575,7 +1803,7 @@ function submitForm(type, editId) {
       type: g('f-type') || '',
       description: g('f-desc') || '',
       controlledBy: g('f-control') || 'Contested',
-      dangerLevel: parseInt(g('f-danger')) || 3,
+      dangerLevel: boundedNumber('f-danger', 3),
       firstSeen: g('f-firstseen') || 'Session 1',
       notes: g('f-notes')
     };
@@ -1589,7 +1817,7 @@ function submitForm(type, editId) {
       date: g('f-date'),
       summary: g('f-summary') || '',
       runners: gArr('f-runners'),
-      outcome: '',
+      outcome: g('f-outcome') || '',
       newspaperUrl: g('f-url')
     };
     if (isEdit) { const i = runtimeData.sessions.findIndex(x=>x.id===editId); runtimeData.sessions[i] = obj; }
@@ -1597,15 +1825,60 @@ function submitForm(type, editId) {
   }
 
   closeModalDirect();
+  saveRuntimeData();
   renderAll();
 }
 
 // ════════════════════════════════════════
 //  SEARCH HELPER
 // ════════════════════════════════════════
+function esc(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[char]));
+}
+
+function jsString(value) {
+  return JSON.stringify(String(value ?? ''));
+}
+
+function statusClass(value) {
+  const normalized = String(value ?? '').toLowerCase();
+  return ['active', 'retired', 'deceased', 'missing', 'unknown', 'defunct', 'destroyed', 'abandoned'].includes(normalized)
+    ? normalized
+    : 'unknown';
+}
+
+function safeUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function sessionReference(label) {
+  const session = runtimeData.sessions.find(s =>
+    s.id.toLowerCase() === String(label).toLowerCase() ||
+    s.title.toLowerCase().startsWith(String(label).toLowerCase())
+  );
+  return session
+    ? `<li><button class="inline-link" onclick="showDetail('session',${jsString(session.id)}); event.stopPropagation()">${esc(label)}</button></li>`
+    : `<li>${esc(label)}</li>`;
+}
+
+function runnerReference(handle) {
+  const npc = runtimeData.npcs.find(n => n.handle.toLowerCase() === String(handle).toLowerCase());
+  return npc
+    ? `<li><button class="inline-link" onclick="showDetail('npc',${jsString(npc.id)}); event.stopPropagation()">${esc(handle)}</button></li>`
+    : `<li>${esc(handle)}</li>`;
+}
+
 function matchSearch(obj, fields) {
   if (!searchQuery) return true;
-  return fields.some(f => (obj[f] || '').toLowerCase().includes(searchQuery));
+  return fields.some(f => String(obj[f] ?? '').toLowerCase().includes(searchQuery));
 }
 
 // ════════════════════════════════════════
