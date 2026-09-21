@@ -33,11 +33,20 @@ def check_html_js(path: Path) -> None:
         check_js_source(script, f"{path} script {index}")
 
 
+def check_external_js(path: Path) -> None:
+    if not path.is_file():
+        raise AssertionError(f"Missing JavaScript file: {path.relative_to(ROOT)}")
+    check_js_source(path.read_text(encoding="utf-8"), path)
+
+
 def main() -> None:
     required = [
         ROOT / "index.html",
         ROOT / "data.js",
         ROOT / "press" / "index.html",
+        ROOT / "run" / "index.html",
+        ROOT / "run" / "app.js",
+        ROOT / "run" / "styles.css",
     ]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.is_file()]
     if missing:
@@ -45,6 +54,7 @@ def main() -> None:
 
     check_html_js(ROOT / "index.html")
     check_html_js(ROOT / "press" / "index.html")
+    check_external_js(ROOT / "run" / "app.js")
     check_js_source((ROOT / "data.js").read_text(encoding="utf-8"), ROOT / "data.js")
 
     data = (ROOT / "data.js").read_text(encoding="utf-8")

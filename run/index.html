@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive CBR+PNK run tracker with locations, assets, obstacles, engagement plans, logoff notes, segmented event clocks, and exports.">
+  <title>CHICAGO-SPRAWL // CBR+PNK Run Console</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">OPERATIONS // RUN MANAGEMENT</p>
+      <h1>CHICAGO-SPRAWL // Run Console</h1>
+      <p class="subtitle">Plan the run. Track the chaos. Export the wreckage.</p>
+    </div>
+    <div class="header-actions">
+      <span id="saveStatus" class="save-status" aria-live="polite">Ready</span>
+      <a class="button ghost" href="../">Wiki</a>
+      <button id="newRunBtn" class="button ghost" type="button">New Run</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="summary-grid" aria-label="Run summary">
+      <article class="metric"><span>Locations</span><strong id="locationCount">0</strong></article>
+      <article class="metric"><span>Assets</span><strong id="assetCount">0</strong></article>
+      <article class="metric"><span>Obstacles</span><strong id="obstacleCount">0</strong></article>
+      <article class="metric"><span>Clocks</span><strong id="clockCount">0</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div><p class="section-code">01</p><h2>Run Overview</h2></div>
+        <p>Mission briefing and current operational state.</p>
+      </div>
+      <div class="field-grid two">
+        <label>Run Name<input id="runName" type="text" placeholder="Operation Chrome Ferret"></label>
+        <label>Status<select id="runStatus"><option>Planning</option><option>In Progress</option><option>Compromised</option><option>Completed</option><option>Aborted</option></select></label>
+      </div>
+      <label>Run Outline<textarea id="runOutline" placeholder="Employer, objective, target, payment, complications..."></textarea></label>
+    </section>
+
+    <section class="panel">
+      <div class="section-title with-action">
+        <div><div><p class="section-code">02</p><h2>Locations</h2></div><p>Sites, routes, safehouses, chokepoints, and questionable elevators.</p></div>
+        <button id="addLocationBtn" class="button" type="button">+ Add Location</button>
+      </div>
+      <div id="locationsList" class="stack"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title with-action">
+        <div><div><p class="section-code">03</p><h2>Potential Assets</h2></div><p>Contacts, gear, leverage, access, transport, and useful lies.</p></div>
+        <button id="addAssetBtn" class="button" type="button">+ Add Asset</button>
+      </div>
+      <div id="assetsList" class="stack"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title with-action">
+        <div><div><p class="section-code">04</p><h2>Obstacles & Engagement</h2></div><p>Threats and the crew's preferred flavor of problem-solving.</p></div>
+        <button id="addObstacleBtn" class="button" type="button">+ Add Obstacle</button>
+      </div>
+      <div id="obstaclesList" class="stack"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div><p class="section-code">05</p><h2>Logoff</h2></div>
+        <p>Extraction, cleanup, payment, evidence, and loose ends.</p>
+      </div>
+      <label>Logoff Conditions and Notes<textarea id="logoff" placeholder="Escape route, payment handoff, evidence removal, consequences..."></textarea></label>
+    </section>
+
+    <section class="panel">
+      <div class="section-title with-action">
+        <div><div><p class="section-code">06</p><h2>Event Clocks</h2></div><p>Segmented trackers for attempts, suspicion, alarms, escalation, or progress.</p></div>
+        <button id="addClockBtn" class="button" type="button">+ Add Clock</button>
+      </div>
+      <div class="notice"><strong>Example:</strong> A four-segment “Pick the Lock” clock advances one segment per attempt. Fill it to resolve the event.</div>
+      <div id="clocksList" class="clock-grid"></div>
+    </section>
+
+    <section class="panel export-panel">
+      <div class="section-title">
+        <div><p class="section-code">07</p><h2>Run Data</h2></div>
+        <p>Your work auto-saves in this browser. Export a portable copy after the session.</p>
+      </div>
+      <div class="action-row">
+        <button id="exportJsonBtn" class="button" type="button">Export JSON</button>
+        <button id="exportTextBtn" class="button secondary" type="button">Export Text Report</button>
+        <label class="button secondary file-button">Import JSON<input id="importJsonInput" type="file" accept="application/json,.json"></label>
+      </div>
+      <p id="feedback" class="feedback" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <template id="basicItemTemplate">
+    <article class="item-card">
+      <div class="field-grid item-fields">
+        <label><span class="name-label">Name</span><input class="item-name" type="text"></label>
+        <label>Notes<input class="item-notes" type="text" placeholder="Details, tags, risks, connections..."></label>
+        <button class="icon-button remove-item" type="button" aria-label="Remove item">×</button>
+      </div>
+    </article>
+  </template>
+
+  <template id="obstacleTemplate">
+    <article class="item-card obstacle-card">
+      <div class="card-topline"><h3>Obstacle</h3><button class="icon-button remove-item" type="button" aria-label="Remove obstacle">×</button></div>
+      <div class="field-grid two">
+        <label>Name<input class="obstacle-name" type="text" placeholder="Security checkpoint"></label>
+        <label>Location or Stage<input class="obstacle-stage" type="text" placeholder="Loading dock"></label>
+      </div>
+      <label>Details<textarea class="obstacle-details" placeholder="Threats, defenses, consequences, weaknesses..."></textarea></label>
+      <fieldset>
+        <legend>Engagement Plan</legend>
+        <div class="engagement-grid">
+          <label class="check"><input class="engagement" type="checkbox" value="Assault"><span>Assault</span></label>
+          <label class="check"><input class="engagement" type="checkbox" value="Deception"><span>Deception</span></label>
+          <label class="check"><input class="engagement" type="checkbox" value="Stealth"><span>Stealth</span></label>
+          <label class="check"><input class="engagement" type="checkbox" value="Social"><span>Social</span></label>
+          <label class="check"><input class="engagement" type="checkbox" value="Transport"><span>Transport</span></label>
+        </div>
+      </fieldset>
+      <label>Plan Notes<input class="plan-notes" type="text" placeholder="Primary approach, backup plan, required asset..."></label>
+    </article>
+  </template>
+
+  <template id="clockTemplate">
+    <article class="item-card clock-card">
+      <div class="card-topline"><h3>Event Clock</h3><button class="icon-button remove-clock" type="button" aria-label="Remove clock">×</button></div>
+      <div class="field-grid two">
+        <label>Clock Name<input class="clock-name" type="text" placeholder="Pick the Lock"></label>
+        <label>Segments<select class="clock-total"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>8</option><option>10</option><option>12</option></select></label>
+      </div>
+      <div class="clock-body">
+        <svg class="clock-svg" viewBox="0 0 180 180" role="img" aria-label="Segmented event clock"></svg>
+        <div class="clock-controls">
+          <p class="clock-status">0 of 4 segments filled</p>
+          <div class="action-row compact">
+            <button class="button secondary decrement-clock" type="button">−1</button>
+            <button class="button increment-clock" type="button">+1 Segment</button>
+            <button class="button ghost reset-clock" type="button">Reset</button>
+          </div>
+          <p class="hint">Tap a wedge to set progress directly.</p>
+        </div>
+      </div>
+      <div class="field-grid two">
+        <label>What Advances It?<input class="clock-trigger" type="text" placeholder="Each lock-picking attempt"></label>
+        <label>Event When Filled<input class="clock-outcome" type="text" placeholder="The lock opens, jams, or attracts attention"></label>
+      </div>
+      <label>Notes<input class="clock-notes" type="text" placeholder="Attempts, consequences, modifiers, related obstacle..."></label>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

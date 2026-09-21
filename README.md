@@ -10,7 +10,7 @@ A living Chicago-based city wiki for a CBR+PNK campaign. Built to grow with ever
 1. Your wiki will be live at `https://yourusername.github.io/repo-name`.
 
 The deployment workflow validates both HTML pages' JavaScript before publishing.
-The press generator is available at `/press/`.
+The press generator is available at `/press/`. The CBR+PNK run console is available at `/run/`.
 
 ## After Each Session
 
@@ -35,8 +35,12 @@ const CITY_TAGLINE = "Lakefront megacity. Corporate towers. Hope beneath the L-t
 ```
 /
 ├── index.html   ← The entire wiki app (don't edit this)
-└── data.js      ← All your city data (edit this or use Export)
+├── data.js      ← All your city data (edit this or use Export)
+├── run/         ← CBR+PNK run planner, clocks, and session report export
+└── press/       ← Newspaper generator
 ```
+
+The **Run Console** is available at `/run/`. Use it to plan a CBR+PNK run, track segmented complication/event clocks, record logoff notes, and export a session report.
 
 ## Newspaper Links
 

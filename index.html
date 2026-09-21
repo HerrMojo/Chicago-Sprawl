@@ -120,6 +120,8 @@
   }
 
   .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .run-link { display:flex; align-items:center; padding:0 1rem; color:var(--accent); font-family:var(--sans); font-weight:700; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; text-decoration:none; white-space:nowrap; }
+  .run-link:hover { color:var(--text); background:rgba(255,255,255,0.03); }
   .tab-btn.active {
     color: var(--accent);
     border-bottom-color: var(--accent);
@@ -837,6 +839,7 @@
     <button class="tab-btn" data-tab="corps"><span class="tab-icon">◆</span> Corps</button>
     <button class="tab-btn" data-tab="locations"><span class="tab-icon">◎</span> Locations</button>
     <button class="tab-btn" data-tab="sessions"><span class="tab-icon">▣</span> Sessions</button>
+    <a class="run-link" href="run/" aria-label="Open CBR+PNK Run Console">⚡ Run Console</a>
   </nav>
   <div class="header-search">
     <div class="search-wrap">
